@@ -10,6 +10,10 @@ import os
 import re
 import sys
 import time
+import urllib.parse
+import urllib.request
+import xml.etree.ElementTree as ET
+from email.utils import parsedate_to_datetime
 
 import yfinance as yf
 
@@ -21,6 +25,13 @@ SYMS = {
     "SMI": "^SSMI", "SPX": "^GSPC", "BTC": "BTC-USD", "XAU": "GC=F", "EURCHF": "EURCHF=X",
 }
 FX = "USDCHF=X"
+# Suchbegriffe für Google News (Deutsch, Schweiz). None-Schlüssel = Makro-Meldungen
+GNEWS = {
+    "NESN": "Nestlé Aktie", "NOVN": "Novartis Aktie", "ROG": "Roche Aktie", "UBSG": "UBS Aktie",
+    "ABBN": "ABB Aktie", "ZURN": "Zurich Insurance Aktie", "LOGN": "Logitech Aktie",
+    "AAPL": "Apple Aktie", "NVDA": "Nvidia Aktie", "MSFT": "Microsoft Aktie", "TSLA": "Tesla Aktie",
+    "BTC": "Bitcoin Kurs", "XAU": "Goldpreis", "EURCHF": "Franken Euro Kurs", "MACRO": "Börse SMI Wall Street",
+}
 # Für diese Titel werden News geholt (SPX-News gelten als Makro-Meldungen)
 NEWS_SYMS = ["NESN", "NOVN", "ROG", "UBSG", "ABBN", "ZURN", "LOGN", "AAPL", "NVDA", "MSFT", "TSLA", "BTC", "XAU", "SPX"]
 
@@ -36,7 +47,12 @@ NEG = ("miss", "misses", "missed", "plunge", "plunges", "fall", "falls", "fallin
        "declines", "sell-off", "selloff", "layoffs", "layoff", "fined", "fine", "tariff", "tariffs", "crash",
        "concern", "concerns", "fears", "fear", "slides", "slide", "tumbles", "tumble", "sinks", "sink",
        "lags", "scrutiny", "delay", "delays", "halt", "halts", "risk", "risks", "worst",
-       "fällt", "fallen", "verlust", "senkt", "warnt", "schwach", "verkaufen", "einbruch")
+       "fällt", "fallen", "verlust", "senkt", "warnt", "schwach", "verkaufen", "einbruch",
+       "sinkt", "sinken", "verliert", "verlieren", "verluste", "rückgang", "abstufung", "klage", "untersuchung",
+       "stellenabbau", "zölle", "zoll", "krise", "gewinnwarnung", "minus", "schwäche", "druck", "belastet",
+       "abwärts", "tief", "tiefer", "absturz", "einbussen", "enttäuscht", "enttäuscht")
+POS = POS + ("legt", "zulegen", "gewinne", "rekordhoch", "erhöht", "kursziel", "plus", "aufwärts", "höher",
+             "kaufempfehlung", "wachstum", "zuversichtlich", "übertrifft", "überzeugt", "rally", "hoch")
 
 
 def sentiment(text):
@@ -101,6 +117,30 @@ def parse_news(item, sym):
             "url": url if url.startswith("https://") else "", "sent": sentiment(title + " " + summary[:300])}
 
 
+def google_news(query, sym, limit=8):
+    url = "https://news.google.com/rss/search?" + urllib.parse.urlencode(
+        {"q": query + " when:7d", "hl": "de-CH", "gl": "CH", "ceid": "CH:de"})
+    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (kurswerk-terminal)"})
+    with urllib.request.urlopen(req, timeout=20) as r:
+        root = ET.fromstring(r.read())
+    items = []
+    for it in root.iter("item"):
+        title = (it.findtext("title") or "").strip()
+        src_el = it.find("source")
+        src = (src_el.text or "").strip() if src_el is not None else "Google News"
+        if src and title.endswith(" - " + src):
+            title = title[: -len(" - " + src)]
+        try:
+            ts = int(parsedate_to_datetime(it.findtext("pubDate")).timestamp() * 1000)
+        except Exception:
+            continue
+        link = (it.findtext("link") or "").strip()
+        items.append({"t": ts, "sym": None if sym == "MACRO" else sym, "head": title, "src": src or "Google News",
+                      "url": link if link.startswith("https://") else "", "sent": sentiment(title)})
+    items.sort(key=lambda n: n["t"], reverse=True)
+    return items[:limit]
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default="site/data/market.json")
@@ -111,30 +151,52 @@ def main():
                      auto_adjust=False, progress=False, threads=True)
 
     out = {"updated": int(time.time() * 1000), "fx": None, "instruments": {}, "news": []}
+    debug = {"missing": [], "news_errors": []}
     for sym, t in SYMS.items():
         rows = history(df, t)
+        if len(rows) < 60:
+            try:
+                single = yf.Ticker(t).history(period="1y", interval="1d", auto_adjust=False)
+                rows = history({t: single}, t)
+            except Exception as e:
+                debug["news_errors"].append(f"{sym} Einzelabfrage: {e}")
         if len(rows) >= 60:
             out["instruments"][sym] = rows
         else:
+            debug["missing"].append(f"{sym} ({len(rows)} Tage)")
             print(f"Warnung: zu wenig Daten für {sym} ({t}): {len(rows)} Tage", file=sys.stderr)
     fx_rows = history(df, FX)
     if fx_rows:
         out["fx"] = fx_rows[-1][4]
 
     seen = set()
-    for sym in NEWS_SYMS:
+
+    def add(n):
+        key = n["head"].lower()[:90]
+        if n["head"] and key not in seen:
+            seen.add(key)
+            out["news"].append(n)
+
+    for sym, q in GNEWS.items():
         try:
-            items = yf.Ticker(SYMS[sym]).news or []
-        except Exception as e:  # News sind optional
-            print(f"News für {sym} fehlgeschlagen: {e}", file=sys.stderr)
-            continue
-        for it in items[:8]:
-            n = parse_news(it, sym)
-            if n and n["head"] not in seen:
-                seen.add(n["head"])
-                out["news"].append(n)
+            for n in google_news(q, sym):
+                add(n)
+        except Exception as e:
+            debug["news_errors"].append(f"Google {sym}: {type(e).__name__}: {e}"[:200])
+    if len(out["news"]) < 10:  # Ersatz: Yahoo-News über yfinance
+        for sym in NEWS_SYMS:
+            try:
+                items = yf.Ticker(SYMS[sym]).news or []
+            except Exception as e:
+                debug["news_errors"].append(f"Yahoo {sym}: {e}"[:200])
+                continue
+            for it in items[:8]:
+                n = parse_news(it, sym)
+                if n:
+                    add(n)
     out["news"].sort(key=lambda n: n["t"], reverse=True)
-    out["news"] = out["news"][:80]
+    out["news"] = out["news"][:90]
+    out["debug"] = debug
 
     if len(out["instruments"]) < 8:
         sys.exit(f"Abbruch: nur {len(out['instruments'])} Titel geladen, alte Daten bleiben online.")
@@ -142,7 +204,7 @@ def main():
     os.makedirs(os.path.dirname(args.out) or ".", exist_ok=True)
     with open(args.out, "w", encoding="utf-8") as f:
         json.dump(out, f, ensure_ascii=False, separators=(",", ":"))
-    print(f"OK: {len(out['instruments'])} Titel, {len(out['news'])} News, USD/CHF {out['fx']}")
+    print(f"OK: {len(out['instruments'])} Titel, {len(out['news'])} News, USD/CHF {out['fx']}, Debug: {debug}")
 
 
 if __name__ == "__main__":
