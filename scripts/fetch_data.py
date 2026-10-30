@@ -25,6 +25,8 @@ SYMS = {
     "SMI": "^SSMI", "SPX": "^GSPC", "BTC": "BTC-USD", "XAU": "GC=F", "EURCHF": "EURCHF=X",
 }
 FX = "USDCHF=X"
+# Ersatz-Ticker, falls Yahoo den ersten nicht liefert
+ALT = {"ROG": ["RO.SW", "ROG.VX"]}
 # Suchbegriffe für Google News (Deutsch, Schweiz). None-Schlüssel = Makro-Meldungen
 GNEWS = {
     "NESN": "Nestlé Aktie", "NOVN": "Novartis Aktie", "ROG": "Roche Aktie", "UBSG": "UBS Aktie",
@@ -155,11 +157,14 @@ def main():
     for sym, t in SYMS.items():
         rows = history(df, t)
         if len(rows) < 60:
-            try:
-                single = yf.Ticker(t).history(period="1y", interval="1d", auto_adjust=False)
-                rows = history({t: single}, t)
-            except Exception as e:
-                debug["news_errors"].append(f"{sym} Einzelabfrage: {e}")
+            for alt in [t] + ALT.get(sym, []):
+                try:
+                    single = yf.Ticker(alt).history(period="1y", interval="1d", auto_adjust=False)
+                    rows = history({alt: single}, alt)
+                except Exception as e:
+                    debug["news_errors"].append(f"{sym} Einzelabfrage {alt}: {e}"[:200])
+                if len(rows) >= 60:
+                    break
         if len(rows) >= 60:
             out["instruments"][sym] = rows
         else:
