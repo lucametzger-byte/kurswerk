@@ -44,7 +44,9 @@ if (data.updated !== st.lastData) {
       return { ...x, sc: KWBT.score(x.P, x.i, KWBT.newsV(s, data.news, now)), held: st.pos[s] ? { ...st.pos[s], auto: true } : null };
     }),
   };
-  const orders = KWBT.coreDecide(ctx, KWBT.V2);
+  // Nur Titel handeln, deren Börse gerade offen ist (sonst wäre der Kurs alt, z.B. am Wochenende)
+  const runTs = Date.now();
+  const orders = KWBT.coreDecide(ctx, KWBT.V2).filter(o => KWBT.isOpen(KWBT.sessionOf(o.s, GRP[o.s]), runTs));
   for (const side of ["sell", "buy"]) for (const o of orders.filter(o => o.side === side)) {
     const x = view[o.s], hs = hsOf(o.s);
     if (side === "sell") {

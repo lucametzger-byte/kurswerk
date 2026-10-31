@@ -182,6 +182,37 @@ function compare(insts,v2=V3){
     smi:{eq:smi,st:stats(smi),half:halves(smi)},ew:{eq:ew,st:stats(ew),half:halves(ew)},bm};
 }
 
+
+/* Handelszeiten: Ein Titel wird nur gehandelt, wenn seine Börse offen ist. Sonst wäre der Kurs alt
+   (z.B. am Wochenende der Schlusskurs vom Freitag) und der Bot würde "in die Vergangenheit" handeln.
+   Feiertage sind nicht berücksichtigt. */
+const SESS_CRYPTO=new Set(["BTC","ETH","SOL","BNB","LTC","AVAX","LINK","XRP","ADA","DOGE"]);
+const SESS_US=new Set(["SPX","NDX","AAPL","NVDA","MSFT","TSLA","AMZN","GOOGL","META","NFLX","AMD","JPM","V","KO","DIS","PLTR"]);
+const SESS_EU=new Set(["DAX","ESTX"]);
+const SESS_FX=new Set(["XAU","XAG","OIL","NG","EURCHF","USDCHF","PL"]);
+function sessionOf(sym,grp){
+  if(SESS_CRYPTO.has(sym)||grp==="crypto")return"crypto";
+  if(SESS_US.has(sym)||grp==="us")return"us";
+  if(SESS_FX.has(sym))return"fx";
+  if(SESS_EU.has(sym)||grp==="eu")return"eu";
+  if(grp==="as")return"as";
+  return"ch";
+}
+const TZF={};
+function localParts(ts,tz){
+  const f=TZF[tz]||(TZF[tz]=new Intl.DateTimeFormat("en-US",{timeZone:tz,weekday:"short",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}));
+  const o={};for(const p of f.formatToParts(new Date(ts)))o[p.type]=p.value;
+  return{wd:["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].indexOf(o.weekday),min:(+o.hour%24)*60+ +o.minute};
+}
+const HOURS={us:["America/New_York",570,960],ch:["Europe/Zurich",540,1050],eu:["Europe/Berlin",540,1050],as:["Asia/Tokyo",540,900]};
+function isOpen(kind,ts){
+  ts=ts||Date.now();
+  if(kind==="crypto")return true;
+  if(kind==="fx"){const{wd,min}=localParts(ts,"Europe/Zurich");return!(wd===6||(wd===0&&min<23*60)||(wd===5&&min>=23*60))}
+  const h=HOURS[kind]||HOURS.ch,{wd,min}=localParts(ts,h[0]);
+  return wd>=1&&wd<=5&&min>=h[1]&&min<h[2];
+}
+
 /* alle Strategien im selben Zeitfenster vergleichen */
 function compareAll(insts){
   for(const s in insts)if(!insts[s].P)insts[s].P=prep(insts[s].rows);
@@ -192,5 +223,5 @@ function compareAll(insts){
   const sm=hold(insts,[bm],dates),ew=hold(insts,Object.keys(insts).filter(s=>s!=="EURCHF"),dates);
   return{dates,alt,core,rot,smi:{eq:sm,st:stats(sm),half:halves(sm)},ew:{eq:ew,st:stats(ew),half:halves(ew)},bm};
 }
-return{compareAll,coreDecide,newsV,dayDiff,prep,score,run,runRot,momOf,pickRot,hold,stats,compare,V1,V2,V3,feeOf};
+return{sessionOf,isOpen,compareAll,coreDecide,newsV,dayDiff,prep,score,run,runRot,momOf,pickRot,hold,stats,compare,V1,V2,V3,feeOf};
 })();

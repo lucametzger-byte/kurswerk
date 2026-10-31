@@ -312,6 +312,23 @@ table.bt-t{min-width:720px}
 .answer.idle{color:var(--faint)}
 .note{font-size:11px;color:var(--faint)}
 .disc{font-size:11px;color:var(--faint);padding:10px 14px}
+.pill.feed{cursor:pointer;background:none;font-family:var(--f-cond)}
+.pill.feed:hover{border-color:var(--fg);color:var(--fg)}
+.pill.feed.on{border-color:var(--up);color:var(--up);background:var(--up-bg)}
+.pill.feed.warn{border-color:var(--accent);color:var(--accent)}
+.wr[data-feed="live"] .p::before{content:"";display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--up);margin-right:5px;vertical-align:2px;animation:pulse 1.6s infinite}
+.wr[data-feed="closed"] .p{color:var(--mute)}
+dialog.fd{background:var(--panel);color:var(--fg);border:1px solid var(--line2);border-radius:6px;padding:18px 18px 14px;max-width:440px;width:calc(100% - 32px)}
+dialog.fd::backdrop{background:rgba(0,0,0,.55)}
+dialog.fd h3{margin:0 0 8px;font:600 17px var(--f-cond)}
+dialog.fd p{margin:0 0 10px;color:var(--mute);font-size:13px;line-height:1.45}
+dialog.fd a{color:var(--info)}
+dialog.fd label{display:block;font-size:12px;color:var(--mute);margin:12px 0 4px}
+dialog.fd input{width:100%;background:var(--panel2);border:1px solid var(--line2);border-radius:4px;padding:7px 8px;font:12.5px var(--f-mono);color:var(--fg)}
+dialog.fd input:focus{outline:none;border-color:var(--accent)}
+dialog.fd .fst{font:11.5px var(--f-mono);color:var(--mute);margin:10px 0 14px;line-height:1.6}
+dialog.fd .row{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+@media (prefers-reduced-motion:reduce){.wr[data-feed="live"] .p::before{animation:none}}
 </style>
 </head>
 <body>
@@ -330,6 +347,7 @@ table.bt-t{min-width:720px}
       <div class="seg mode" id="modeSw" role="group" aria-label="Modus"><button data-m="live" aria-pressed="false">Live</button><button data-m="sim" aria-pressed="false">Simulation</button></div>
       <div class="seg spd" id="spd" role="group" aria-label="Tempo der Simulation" hidden><button data-v="0" aria-pressed="false" title="Pause">II</button><button data-v="1" aria-pressed="false">1×</button><button data-v="5" aria-pressed="false">5×</button><button data-v="20" aria-pressed="false">20×</button></div>
       <span class="pill sim" id="dataPill">Simulierte Daten</span>
+      <button class="pill feed" id="feedPill" hidden title="Echtzeit-Kurse einrichten">Echtzeit</button>
       <span class="pill"><span class="dot"></span><span id="simday">Handelstag</span></span>
       <span class="clock" id="clock">--:--:--</span>
     </div>
@@ -353,6 +371,7 @@ table.bt-t{min-width:720px}
       <div class="quote">
         <div class="qn"><div class="sym" id="qSym">—</div><div class="nm" id="qName"></div><div class="chips2" id="qTags"></div></div>
         <div class="qp"><span class="px" id="qPx">—</span><span class="ccy" id="qCcy"></span><span class="ch" id="qCh"></span></div>
+        <span class="chip neu" id="qFeed" hidden></span>
         <span class="chip neu" id="qSig">—</span>
         <button class="btn sm" id="qTrade" style="margin-left:auto">Handeln</button>
       </div>
@@ -509,6 +528,18 @@ table.bt-t{min-width:720px}
   </div>
 </div>
 
+<dialog class="fd" id="feedDlg" aria-labelledby="fdT">
+  <form method="dialog">
+    <h3 id="fdT">Echtzeit-Kurse</h3>
+    <p><b>Krypto</b> (Bitcoin, Ethereum, Solana) kommt live von Binance, ohne Anmeldung, rund um die Uhr.</p>
+    <p><b>US-Aktien</b> live brauchen einen kostenlosen API-Key von Finnhub: <a href="https://finnhub.io/register" target="_blank" rel="noopener">finnhub.io/register</a>. Der Key bleibt nur in diesem Browser gespeichert und landet nicht auf GitHub.</p>
+    <p>Schweizer Aktien, Indizes und Rohstoffe bleiben verzögert (~15 Min.). Ist eine Börse zu, handeln weder du noch der Autopilot diese Titel, damit nie zu alten Kursen gehandelt wird.</p>
+    <label for="fhKey">Finnhub API-Key</label>
+    <input id="fhKey" autocomplete="off" spellcheck="false" placeholder="z.B. d1abc…">
+    <div class="fst" id="feedSt"></div>
+    <div class="row"><button class="btn ghost" value="cancel">Schliessen</button><button class="btn" id="fhSave" value="save">Key speichern</button></div>
+  </form>
+</dialog>
 <script src="bt.js"></script>
 <script>
 "use strict";
@@ -1071,6 +1102,7 @@ function renderQuote(){
   const yr=H.slice(-252),lo=Math.min(...yr.map(k=>k.l)),hi=Math.max(...yr.map(k=>k.h)),pos=(q.c-lo)/(hi-lo)*100;
   const st=[["Eröffnung",fmt(t.o,s.dec)],["Tageshoch / -tief",`${fmt(t.h,s.dec)} / ${fmt(t.l,s.dec)}`],["Vortag",fmt(H[H.length-2].c,s.dec)],["Volumen",fmtBig(t.v)],
     ["52W-Spanne",`${fmt(lo,s.dec)} – ${fmt(hi,s.dec)}`,pos],["Volatilität 20T",fmt(a.vol20*100,1)+" % p.a."],["Perf. 20T",pct(a.ret20,1),a.ret20],["Max. Drawdown 1J",pct(a.mdd,1)]];
+  renderFeedChip();
   $("#stats").innerHTML=st.map(([k,v,x],i)=>`<div class="st"><div class="k">${k}</div><div class="v ${i===6?sgn(x):i===7?"down":""}">${v}</div>${i===4?`<div class="rng"><i style="left:calc(${clamp(pos,0,100)}% - 1px)"></i></div>`:""}</div>`).join("");
 }
 function renderBot(){
@@ -1118,6 +1150,7 @@ if(!(dep.dayStart>0))dep.dayStart=totals().val;
 function trade(sym,side,qIn,auto,core){
   const s=BY[sym],q=floorQ(+qIn,s);
   if(!(q>0))return{ok:false,msg:"Bitte eine Stückzahl grösser als 0 eingeben."};
+  if(LIVE&&!openNow(s))return{ok:false,closed:true,msg:`Börse geschlossen: ${sym} wird erst wieder zu Handelszeiten gehandelt, sonst wäre der Kurs veraltet.`};
   const fx=fxOf(s),px=s.last*(side==="buy"?1+hsOf(s):1-hsOf(s)),gross=q*px*fx,fee=feeOf(gross);let pl=null;
   if(side==="buy"){
     if(gross+fee>dep.cash+1e-6)return{ok:false,msg:`Zu wenig Cash: nötig CHF ${fmt(gross+fee)}, verfügbar CHF ${fmt(dep.cash)}.`};
@@ -1143,11 +1176,11 @@ function buyAmt(sym,amt,core){const s=BY[sym];if(!s||amt<500)return null;const q
    Er handelt nur Positionen, die er selbst gekauft hat. */
 function autopilot(){
   if(!dep.auto||typeof KWBT==="undefined")return;
-  const ap=dep.ap,P={},msgs=[],note=r=>{if(r&&r.ok)msgs.push(r.msg)};
+  const ap=dep.ap,P={},msgs=[];let blocked=false;const note=r=>{if(r&&r.ok)msgs.push(r.msg);else if(r&&r.closed)blocked=true;return r};
   for(const s of INST)P[s.sym]=KWBT.prep(rowsOf(s));
   const lastD=ymd(BENCH().hist[BENCH().hist.length-1].d);
   const autoPos=()=>Object.keys(dep.pos).filter(k=>dep.pos[k].auto&&!dep.pos[k].core);
-  const sell=(k,cool)=>{note(trade(k,"sell",dep.pos[k].q,true));if(cool)ap.cool[k]=lastD};
+  const sell=(k,cool)=>{const r=note(trade(k,"sell",dep.pos[k].q,true));if(cool&&r.ok)ap.cool[k]=lastD};
   if(ap.strat==="rot"){
     const wk=isoWeek(BENCH().hist[BENCH().hist.length-1].d);
     if(ap.lastRot!==wk){
@@ -1155,7 +1188,7 @@ function autopilot(){
       const want=KWBT.pickRot(cands,cfg),ws=new Set(want.map(x=>x.s));
       for(const k of Object.keys(dep.pos))if(dep.pos[k].auto&&(dep.pos[k].core||!ws.has(k)))sell(k,false);
       for(const x of want)if(!dep.pos[x.s])note(buyAmt(x.s,Math.min(dep.cash-50,x.w*totals().val),false));
-      ap.lastRot=wk;
+      if(!blocked)ap.lastRot=wk; // geschlossene Börse: Umschichtung beim nächsten Lauf nachholen
     }
   }else{
     // Signal + Kern: dieselbe Logik wie der Master-Bot auf GitHub (bt.js → coreDecide)
@@ -1533,14 +1566,98 @@ async function refreshLive(){
     if(d.updated===LIVE.updated){updateDay();return}
     for(const s of INST){const rows=d.instruments[s.sym];if(rows&&rows.length>=60){s.hist=fromRows(rows);s.last=s.hist[s.hist.length-1].c}}
     if(+d.fx>0)usdchf=+d.fx;
+    reapplyFeed();
     LIVE=d;news=liveNews(d);
     checkDay();analyzeAll();autopilot();recordEq();saveDepot();runMC(cur(),analysis[sel]);renderBt();
     renderAll();renderNews();updateDay();loadBot();say("Neue Kurse geladen");
   }catch(e){say("Aktualisierung fehlgeschlagen. Neuer Versuch in einer Minute.");updateDay()}
 }
+/* ---------- Echtzeit-Feeds (nur Live-Modus): Binance für Krypto, Finnhub für US-Aktien ----------
+   Ticks aktualisieren die heutige Tageskerze. Ein Titel gilt als "live", wenn der letzte Tick jünger als 2 Min. ist. */
+var FEED={};const FRESH_MS=120e3;
+function sessOf(s){return typeof KWBT!=="undefined"?KWBT.sessionOf(s.sym,s.grp):"ch"}
+function openNow(s){return!LIVE||typeof KWBT==="undefined"||KWBT.isOpen(sessOf(s),Date.now())}
+function feedState(s){const f=FEED&&FEED[s.sym];if(f&&Date.now()-f.t<FRESH_MS)return"live";return openNow(s)?"delayed":"closed"}
+const FEED_TXT={live:"Live",delayed:"Verzögert ~15 Min.",closed:"Börse zu"};
+const FEED_TIP={live:"Echtzeit-Kurs",delayed:"Kurs von Yahoo Finance, bis zu 15 Minuten verzögert",closed:"Börse geschlossen: kein Handel bis zur Eröffnung"};
+function renderFeedChip(){if(!LIVE||!FEED)return; // vor dem Start der Feeds noch nichts anzeigen
+  const q=$("#qFeed"),st=feedState(cur());q.hidden=false;q.textContent=FEED_TXT[st];q.title=FEED_TIP[st];q.className="chip "+(st==="live"?"up":"neu")}
+const tzFmt={};
+const tzDay=(ts,tz)=>(tzFmt[tz]||(tzFmt[tz]=new Intl.DateTimeFormat("en-CA",{timeZone:tz,year:"numeric",month:"2-digit",day:"2-digit"}))).format(new Date(ts));
+const feedDirty=new Set();let feedNew=false;
+function applyTick(sym,px,ts,vol,replay){
+  const s=BY[sym];if(!s||!(px>0))return;
+  const tz=sessOf(s)==="crypto"?"UTC":"America/New_York",day=tzDay(ts,tz),H=s.hist;
+  if(day>ymd(H[H.length-1].d)){H.push({d:pdate(day),o:px,h:px,l:px,c:px,v:0});if(H.length>800)H.shift()}
+  const k=H[H.length-1];k.c=px;if(px>k.h)k.h=px;if(px<k.l)k.l=px;if(vol>0)k.v+=vol;
+  s.last=px;feedDirty.add(sym);
+  if(!replay){FEED[sym]={t:Date.now(),px,ts};feedNew=true}
+}
+function reapplyFeed(){for(const k in FEED){const f=FEED[k];if(Date.now()-f.t<FRESH_MS)applyTick(k,f.px,f.ts,0,true)}}
+const feedSt={bn:"verbinde …",fh:"kein Key"};
+let fhKey="";try{fhKey=localStorage.getItem("kw_finnhub")||""}catch(e){}
+
+function startBinance(){
+  const cry=INST.filter(s=>sessOf(s)==="crypto").map(s=>s.sym);if(!cry.length){feedSt.bn="keine Titel";return}
+  const map=Object.fromEntries(cry.map(k=>[k+"USDT",k]));
+  const url="wss://stream.binance.com:9443/stream?streams="+Object.keys(map).map(k=>k.toLowerCase()+"@miniTicker").join("/");
+  let tries=0,poll=null;
+  const rest=async()=>{try{const r=await fetch("https://data-api.binance.vision/api/v3/ticker/price?symbols="+encodeURIComponent(JSON.stringify(Object.keys(map))),{cache:"no-store"});if(!r.ok)throw new Error(r.status);
+    for(const x of await r.json())applyTick(map[x.symbol],+x.price,Date.now());feedSt.bn="live (alle 5 s)"}catch(e){feedSt.bn="nicht erreichbar"}renderFeed()};
+  const fallback=()=>{if(!poll){rest();poll=setInterval(rest,5000)}};
+  const open=()=>{let ws;try{ws=new WebSocket(url)}catch(e){fallback();return}
+    ws.onopen=()=>{tries=0;feedSt.bn="live";if(poll){clearInterval(poll);poll=null}renderFeed()};
+    ws.onmessage=e=>{try{const m=JSON.parse(e.data),d=m.data||m,sym=map[d.s];if(sym)applyTick(sym,+d.c,d.E||Date.now())}catch(err){}};
+    ws.onerror=()=>{try{ws.close()}catch(e){}};
+    ws.onclose=()=>{tries++;if(tries>=3)fallback();else{feedSt.bn="getrennt";renderFeed()}setTimeout(open,Math.min(60e3,2e3*2**tries))};
+  };
+  open();
+}
+
+let fhWs=null,fhTries=0,fhTimer=null;
+function startFinnhub(){
+  clearTimeout(fhTimer);
+  if(fhWs){const o=fhWs;fhWs=null;o.onclose=null;try{o.close()}catch(e){}}
+  const us=INST.filter(s=>s.grp==="us").map(s=>s.sym);
+  if(!fhKey){feedSt.fh="kein Key";renderFeed();return}
+  feedSt.fh="verbinde …";renderFeed();
+  let ws;try{ws=fhWs=new WebSocket("wss://ws.finnhub.io?token="+encodeURIComponent(fhKey))}catch(e){feedSt.fh="Verbindung fehlgeschlagen";renderFeed();return}
+  ws.onopen=()=>{fhTries=0;for(const k of us)ws.send(JSON.stringify({type:"subscribe",symbol:k}));feedSt.fh=us.some(k=>openNow(BY[k]))?"verbunden":"verbunden, Börse zu";renderFeed()};
+  ws.onmessage=e=>{try{const m=JSON.parse(e.data);
+    if(m.type==="trade"){const last={},vol={};for(const t of m.data||[]){vol[t.s]=(vol[t.s]||0)+(+t.v||0);if(!last[t.s]||t.t>=last[t.s].t)last[t.s]=t}
+      for(const k in last)applyTick(k,+last[k].p,last[k].t,vol[k]);feedSt.fh="live"}
+    else if(m.type==="error"){feedSt.fh="Fehler: "+String(m.msg||"unbekannt").slice(0,80);renderFeed()}}catch(err){}};
+  ws.onerror=()=>{};
+  ws.onclose=()=>{if(fhWs!==ws)return;fhWs=null;fhTries++;
+    if(!feedSt.fh.startsWith("Fehler"))feedSt.fh=fhTries>=3?"Verbindung fehlgeschlagen. Key prüfen.":"getrennt, neuer Versuch …";renderFeed();
+    if(fhTries<=8)fhTimer=setTimeout(startFinnhub,Math.min(120e3,3e3*2**fhTries))};
+}
+
+function renderFeed(){
+  const n=INST.filter(s=>feedState(s)==="live").length,pill=$("#feedPill");pill.hidden=false;
+  pill.innerHTML=n?`<span class="dot"></span>Echtzeit · ${n} Titel`:fhKey?"Echtzeit · wartet":"Echtzeit einrichten";
+  pill.className="pill feed"+(n?" on":fhKey?"":" warn");
+  for(const s of INST){const r=rows[s.sym];if(r)r.el.dataset.feed=feedState(s)}
+  renderFeedChip();
+  $("#feedSt").innerHTML=`Krypto (Binance): ${esc(feedSt.bn)}<br>US-Aktien (Finnhub): ${esc(feedSt.fh)}`;
+}
+
 if(LIVE){
-  const pill=$("#dataPill");pill.textContent="Echte Kurse · verzögert";pill.className="pill live";pill.title="Yahoo Finance, alle ~10 Minuten aktualisiert, Börsenkurse teils 15 Min. verzögert";
-  $("#disc").textContent="Kurse und News: Yahoo Finance, alle ~10 Minuten aktualisiert, teils 15 Min. verzögert. Signale stammen aus einem einfachen Modell. Gehandelt wird nur mit Spielgeld. Keine Anlageberatung.";
+  const dlg=$("#feedDlg"),keyIn=$("#fhKey");
+  $("#feedPill").onclick=()=>{keyIn.value=fhKey;renderFeed();if(dlg.showModal)dlg.showModal();else dlg.setAttribute("open","")};
+  dlg.addEventListener("close",()=>{if(dlg.returnValue!=="save")return;const k=keyIn.value.trim();if(k===fhKey)return;
+    fhKey=k;try{k?localStorage.setItem("kw_finnhub",k):localStorage.removeItem("kw_finnhub")}catch(e){}fhTries=0;startFinnhub();say(k?"Finnhub-Key gespeichert. US-Aktien laufen live, sobald die Börse offen ist.":"Finnhub-Key entfernt.")});
+  startBinance();startFinnhub();renderFeed();
+  // Anzeige höchstens einmal pro Sekunde neu zeichnen
+  setInterval(()=>{if(!feedDirty.size)return;const hit=feedDirty.has(sel);feedDirty.clear();renderWatch();renderDepot();renderFeed();if(hit){renderQuote();drawMain()}},1000);
+  setInterval(renderFeed,5000);
+  // Signale und Autopilot mit den frischen Kursen einmal pro Minute
+  setInterval(()=>{if(!feedNew)return;feedNew=false;analyzeAll();autopilot();saveDepot();renderBot();renderDepot()},60000);
+}
+
+if(LIVE){
+  const pill=$("#dataPill");pill.textContent="Echte Kurse";pill.className="pill live";pill.title="Yahoo Finance alle ~10 Minuten (Börsenkurse teils 15 Min. verzögert), dazu Echtzeit für Krypto und US-Aktien";
+  $("#disc").textContent="Kurse und News: Yahoo Finance, alle ~10 Minuten aktualisiert, teils 15 Min. verzögert. Krypto in Echtzeit von Binance, US-Aktien in Echtzeit von Finnhub (eigener Key). Bei geschlossener Börse wird nicht gehandelt. Signale stammen aus einem einfachen Modell. Gehandelt wird nur mit Spielgeld. Keine Anlageberatung.";
   checkDay();updateDay();loadBot();new ResizeObserver(()=>drawMb()).observe($("#cvMb"));
   setInterval(refreshLive,60000);
 }else setInterval(loop,TICK_MS);

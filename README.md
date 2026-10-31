@@ -4,6 +4,9 @@ Börsenterminal im Bloomberg-Stil mit Analyse-Bot, Monte-Carlo-Prognose und Spie
 
 **Zwei Modi** (Schalter oben rechts):
 - **Live**: echte Kurse und News von Yahoo Finance, alle ~10 Minuten aktualisiert (Börsenkurse teils 15 Min. verzögert). Gehandelt wird mit Spielgeld.
+  - **Echtzeit für Krypto**: Bitcoin, Ethereum und Solana kommen direkt im Browser live von Binance (WebSocket, ohne Anmeldung, 24/7).
+  - **Echtzeit für US-Aktien**: mit einem kostenlosen API-Key von [Finnhub](https://finnhub.io/register). Oben auf **Echtzeit einrichten** klicken und den Key eintragen. Er wird nur im Browser gespeichert, nie im Repo.
+  - Jeder Titel zeigt seinen Status: **Live**, **Verzögert** oder **Börse zu**. Bei geschlossener Börse handeln weder du noch der Autopilot noch der Master-Bot diesen Titel, damit nie zu alten Kursen gehandelt wird. Feiertage sind nicht berücksichtigt.
 - **Simulation**: simulierter Markt mit rund 140 Titeln (Schweiz, USA, Europa, Asien, Krypto, Rohstoffe, Devisen). Branchen bewegen sich gemeinsam, es gibt Quartalszahlen, Branchen-News, Crashs und Rallys. Tempo: Pause, 1× (ein Handelstag = 2 Minuten), 5× oder 20×.
 
 Jeder Modus hat sein eigenes Depot mit CHF 100’000 Startkapital. Gespeichert wird im Browser.
