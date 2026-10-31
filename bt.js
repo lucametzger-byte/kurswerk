@@ -123,6 +123,67 @@ function runRot(insts,cfg,startDate,startCash=100000){
   }
   return{eq,closed,fees,open:Object.keys(pos)};
 }
+
+/* ===== Master-Bot: Rotation + Halte-Zone + Signalfilter + Trailing-Stop + Index-Füllung =====
+   masterDecide wird vom Backtest, vom Browser-Autopiloten und vom GitHub-Bot gemeinsam benutzt. */
+const V4={name:"Master-Bot",kind:"master",every:5,top:5,keep:8,cap:.25,minScore:-15,sellScore:-40,stopATR:3,fill:["SMI","SPX"],fillMax:.6,skip:["EURCHF"]};
+/* ctx = {V, rebal, syms:[{s,P,i,fx,sc?,held:{q,hi,fill}|null}]}  ->  Aufträge [{s,side,amt|frac,why,fill}] */
+function masterDecide(ctx,cfg=V4){
+  const orders=[],by={};for(const x of ctx.syms)by[x.s]=x;
+  const fills=cfg.fill.filter(f=>by[f]),val=x=>x.held?x.held.q*x.P.C[x.i]*x.fx:0;
+  const scOf=x=>x.sc||score(x.P,x.i,null);
+  // täglicher Schutz der Einzeltitel
+  for(const x of ctx.syms){const h=x.held;if(!h||h.fill)continue;const c=x.P.C[x.i],atr=x.P.atr[x.i];
+    if(cfg.stopATR&&atr&&c<h.hi-cfg.stopATR*atr){orders.push({s:x.s,side:"sell",why:"Stop"});continue}
+    const sc=scOf(x);if(sc&&sc.score<=cfg.sellScore)orders.push({s:x.s,side:"sell",why:"Signal"})}
+  if(!ctx.rebal)return orders;
+  const selling=new Set(orders.map(o=>o.s));
+  const ranked=ctx.syms.filter(x=>!cfg.skip.includes(x.s)&&!fills.includes(x.s)).map(x=>({x,mo:momOf(x.P,x.i),sc:scOf(x)}))
+    .filter(c=>c.mo&&c.mo.m>0&&c.mo.trend&&(!c.sc||c.sc.score>=cfg.minScore)).sort((a,b)=>b.mo.adj-a.mo.adj);
+  const rank=new Map(ranked.map((c,k)=>[c.x.s,k]));
+  const kept=ctx.syms.filter(x=>x.held&&!x.held.fill&&!selling.has(x.s)&&rank.has(x.s)&&rank.get(x.s)<cfg.keep).map(x=>x.s);
+  for(const x of ctx.syms)if(x.held&&!x.held.fill&&!selling.has(x.s)&&!kept.includes(x.s)){orders.push({s:x.s,side:"sell",why:"Rotation"});selling.add(x.s)}
+  const target=[...kept];for(const c of ranked){if(target.length>=cfg.top)break;if(!target.includes(c.x.s))target.push(c.x.s)}
+  const tc=target.map(s=>ranked.find(c=>c.x.s===s)),inv=tc.map(c=>1/c.mo.vol),tot=inv.reduce((a,b)=>a+b,0)||1;
+  let satW=0;
+  tc.forEach((c,k)=>{const w=Math.min(cfg.cap,inv[k]/tot*tc.length/cfg.top);
+    if(c.x.held)satW+=val(c.x)/ctx.V;else{satW+=w;orders.push({s:c.x.s,side:"buy",amt:w*ctx.V,why:"Rotation"})}});
+  // freies Geld in den stärkeren Index, solange er über seiner 50-Tage-Linie liegt
+  if(!fills.length)return orders;
+  const fillW=Math.max(0,Math.min(cfg.fillMax,.97-satW));
+  const up=fills.map(f=>by[f]).filter(x=>x.i>=63&&x.P.s50[x.i]!=null&&x.P.C[x.i]>x.P.s50[x.i]).sort((a,b)=>b.P.C[b.i]/b.P.C[b.i-63]-a.P.C[a.i]/a.P.C[a.i-63]);
+  const best=fillW>=.05&&up[0]?up[0].s:null;
+  for(const f of fills){const x=by[f];if(!x.held||!x.held.fill)continue;
+    if(f!==best)orders.push({s:f,side:"sell",why:"Kern"});
+    else{const hw=val(x)/ctx.V;if(hw>fillW+.08)orders.push({s:f,side:"sell",frac:1-fillW/hw,why:"Kern"});else if(hw<fillW-.15)orders.push({s:f,side:"buy",amt:(fillW-hw)*ctx.V,why:"Kern",fill:true})}}
+  if(best&&!by[best].held)orders.push({s:best,side:"buy",amt:fillW*ctx.V,why:"Kern",fill:true});
+  return orders;
+}
+function runMaster(insts,cfg,startDate,startCash=100000){
+  const syms=Object.keys(insts),P={};for(const s of syms)P[s]=prep(insts[s].rows);
+  const dates=[...new Set(syms.flatMap(s=>P[s].D))].sort(),ptr={};for(const s of syms)ptr[s]=-1;
+  let cash=startCash,fees=0,k=0;const pos={},pend={},eq=[],closed=[];
+  const value=()=>{let v=cash;for(const s in pos)v+=pos[s].q*P[s].C[ptr[s]]*insts[s].fx;return v};
+  const qty=(s,x)=>s==="BTC"?Math.floor(x*1e4)/1e4:Math.floor(x);
+  for(let di=0;di<dates.length;di++){
+    const d=dates[di],today=[];
+    for(const s of syms){const p=P[s];while(ptr[s]+1<p.D.length&&p.D[ptr[s]+1]<=d)ptr[s]++;if(ptr[s]>=0&&p.D[ptr[s]]===d)today.push(s)}
+    if(d<startDate)continue;
+    for(const ph of ["sell","buy","fill"])for(const s of today){const o=pend[s];if(!o)continue;
+      if((ph==="sell")!==(o.side==="sell")||(ph==="fill")!==(o.side==="buy"&&!!o.fill))continue;delete pend[s];
+      const i=ptr[s],fx=insts[s].fx,hs=s==="BTC"?.001:HS[insts[s].grp];
+      if(o.side==="sell"&&pos[s]){const p=pos[s],q=o.frac?qty(s,p.q*o.frac):p.q;if(q<=0)continue;
+        const g=q*P[s].O[i]*(1-hs)*fx,f=feeOf(g),cb=p.cost*q/p.q;cash+=g-f;fees+=f;closed.push({sym:s,in:p.entry,out:d,pl:g-f-cb,ret:(g-f)/cb-1,why:o.why});
+        if(q>=p.q)delete pos[s];else{p.q-=q;p.cost-=cb}}
+      else if(o.side==="buy"){const px=P[s].O[i]*(1+hs),amt=Math.min(o.amt,cash-50),q=qty(s,(amt-feeOf(amt))/(px*fx));
+        if(q>0){const g=q*px*fx,f=feeOf(g);if(g+f<=cash){cash-=g+f;fees+=f;if(pos[s]){pos[s].q+=q;pos[s].cost+=g+f}else pos[s]={q,cost:g+f,entry:d,hi:P[s].C[i],fill:!!o.fill}}}}}
+    const V=value();eq.push([d,V]);
+    for(const s in pos)pos[s].hi=Math.max(pos[s].hi,P[s].C[ptr[s]]);
+    const ctx={V,rebal:k++%cfg.every===0,syms:syms.filter(s=>ptr[s]>=0).map(s=>({s,P:P[s],i:ptr[s],fx:insts[s].fx,held:pos[s]||null}))};
+    for(const o of masterDecide(ctx,cfg))if(!pend[o.s]||o.side==="sell")pend[o.s]=o;
+  }
+  return{eq,closed,fees,open:Object.keys(pos)};
+}
 function hold(insts,syms,dates,startCash=100000){
   // gleichgewichtet kaufen am ersten Tag, danach halten (ohne Gebühren)
   const P={};syms.forEach(s=>P[s]=insts[s].rows);const first={},ptr={};syms.forEach(s=>ptr[s]=-1);
@@ -150,10 +211,10 @@ function compare(insts,v2=V3){
 function compareAll(insts){
   const ref=insts.SMI||insts[Object.keys(insts)[0]],startDate=ref.rows[Math.min(130,Math.floor(ref.rows.length/2))][0];
   const pack=r=>({eq:r.eq,closed:r.closed,st:stats(r.eq,r.closed,r.fees),half:halves(r.eq),open:r.open});
-  const alt=pack(run(insts,V1,100000,startDate)),core=pack(run(insts,V2,100000,startDate)),rot=pack(runRot(insts,V3,startDate));
+  const alt=pack(run(insts,V1,100000,startDate)),core=pack(run(insts,V2,100000,startDate)),rot=pack(runRot(insts,V3,startDate)),master=pack(runMaster(insts,V4,startDate));
   const dates=core.eq.map(e=>e[0]),bm=insts.SMI?"SMI":Object.keys(insts)[0];
   const sm=hold(insts,[bm],dates),ew=hold(insts,Object.keys(insts).filter(s=>s!=="EURCHF"),dates);
-  return{dates,alt,core,rot,smi:{eq:sm,st:stats(sm),half:halves(sm)},ew:{eq:ew,st:stats(ew),half:halves(ew)},bm};
+  return{dates,alt,core,rot,master,smi:{eq:sm,st:stats(sm),half:halves(sm)},ew:{eq:ew,st:stats(ew),half:halves(ew)},bm};
 }
-return{compareAll,prep,score,run,runRot,momOf,pickRot,hold,stats,compare,V1,V2,V3,feeOf};
+return{compareAll,masterDecide,runMaster,V4,prep,score,run,runRot,momOf,pickRot,hold,stats,compare,V1,V2,V3,feeOf};
 })();
