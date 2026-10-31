@@ -4,7 +4,7 @@ Börsenterminal im Bloomberg-Stil mit Analyse-Bot, Monte-Carlo-Prognose und Spie
 
 **Zwei Modi** (Schalter oben rechts):
 - **Live**: echte Kurse und News von Yahoo Finance, alle ~10 Minuten aktualisiert (Börsenkurse teils 15 Min. verzögert). Gehandelt wird mit Spielgeld.
-- **Simulation**: simulierter Markt, der rund um die Uhr läuft. Ein Handelstag dauert 2 Minuten.
+- **Simulation**: simulierter Markt mit rund 140 Titeln (Schweiz, USA, Europa, Asien, Krypto, Rohstoffe, Devisen). Branchen bewegen sich gemeinsam, es gibt Quartalszahlen, Branchen-News, Crashs und Rallys. Tempo: Pause, 1× (ein Handelstag = 2 Minuten), 5× oder 20×.
 
 Jeder Modus hat sein eigenes Depot mit CHF 100’000 Startkapital. Gespeichert wird im Browser.
 

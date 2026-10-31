@@ -7,8 +7,8 @@ function sma(a,n){const o=new Array(a.length).fill(null);let s=0;for(let i=0;i<a
 function ema(a,n){const k=2/(n+1),o=[];let e=a[0];for(let i=0;i<a.length;i++){e=i?a[i]*k+e*(1-k):a[0];o.push(e)}return o}
 function rsi(a,n=14){const o=new Array(a.length).fill(null);let g=0,l=0;for(let i=1;i<a.length;i++){const d=a[i]-a[i-1],up=Math.max(d,0),dn=Math.max(-d,0);if(i<=n){g+=up/n;l+=dn/n;if(i===n)o[i]=l?100-100/(1+g/l):100}else{g=(g*(n-1)+up)/n;l=(l*(n-1)+dn)/n;o[i]=l?100-100/(1+g/l):100}}return o}
 function sd(a){const m=a.reduce((x,y)=>x+y,0)/a.length;return Math.sqrt(a.reduce((x,y)=>x+(y-m)**2,0)/Math.max(1,a.length-1))}
-const HS={ch:.0005,us:.0005,x:.0003},CRYPTO=new Set(["BTC","ETH","SOL"]);
-const QDEC={BTC:4,ETH:3,SOL:2};
+const HS={ch:.0005,us:.0005,eu:.0005,as:.0005,crypto:.001,x:.0003},CRYPTO=new Set(["BTC","ETH","SOL","XRP","BNB","ADA","DOGE","AVAX","DOT","LINK","LTC","TON"]);
+const QDEC={BTC:4,ETH:3,SOL:2,BNB:3,LTC:2,AVAX:2,LINK:2};
 const feeOf=v=>clamp(v*.001,5,40);
 
 function prep(rows){
@@ -35,11 +35,11 @@ function score(P,i,newsV){
 /* Strategie-Parameter */
 const V1={name:"Autopilot alt",entry:40,minConf:.5,exit:-15,confirm:false,regime:false,stopATR:0,maxW:.08,risk:0,maxPos:8,cool:0,ownOnly:false,skip:[]};
 const V2={name:"Autopilot neu",entry:30,minConf:.45,exit:-10,confirm:true,regime:true,stopATR:3,maxW:.15,risk:.0035,maxPos:8,cool:3,ownOnly:true,skip:["EURCHF","SPX"],core:{sym:"SMI",w:.5,buf:.02}};
-const BENCH_OF={ch:"SMI",us:"SPX"};
+const BENCH_OF={ch:"SMI",us:"SPX",eu:"DAX"};
 
 /* insts: {sym:{rows,grp,fx}} */
 function run(insts,cfg,startCash=100000,startDate=""){
-  const syms=Object.keys(insts),P={};for(const s of syms)P[s]=prep(insts[s].rows);
+  const syms=Object.keys(insts),P={};for(const s of syms)P[s]=insts[s].P||prep(insts[s].rows);
   const dates=[...new Set(syms.flatMap(s=>P[s].D))].sort();
   const ptr={};for(const s of syms)ptr[s]=-1;
   let cash=startCash,fees=0;const pos={},pend={},lastExit={},eq=[],closed=[];let lastSc={};
@@ -102,7 +102,7 @@ function pickRot(cands,cfg){
   return ok.map((c,k)=>({s:c.s,w:Math.min(cfg.cap,inv[k]/tot*ok.length/cfg.top)}));
 }
 function runRot(insts,cfg,startDate,startCash=100000){
-  const syms=Object.keys(insts),P={};for(const s of syms)P[s]=prep(insts[s].rows);
+  const syms=Object.keys(insts),P={};for(const s of syms)P[s]=insts[s].P||prep(insts[s].rows);
   const dates=[...new Set(syms.flatMap(s=>P[s].D))].sort(),ptr={};for(const s of syms)ptr[s]=-1;
   let cash=startCash,fees=0,k=0;const pos={},pend={},eq=[],closed=[];
   const value=()=>{let v=cash;for(const s in pos)v+=pos[s].q*P[s].C[ptr[s]]*insts[s].fx;return v};
@@ -184,6 +184,7 @@ function compare(insts,v2=V3){
 
 /* alle Strategien im selben Zeitfenster vergleichen */
 function compareAll(insts){
+  for(const s in insts)if(!insts[s].P)insts[s].P=prep(insts[s].rows);
   const ref=insts.SMI||insts[Object.keys(insts)[0]],startDate=ref.rows[Math.min(130,Math.floor(ref.rows.length/2))][0];
   const pack=r=>({eq:r.eq,closed:r.closed,st:stats(r.eq,r.closed,r.fees),half:halves(r.eq),open:r.open});
   const alt=pack(run(insts,V1,100000,startDate)),core=pack(run(insts,V2,100000,startDate)),rot=pack(runRot(insts,V3,startDate));

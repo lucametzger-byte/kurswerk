@@ -54,7 +54,7 @@ button{cursor:pointer}
 .top{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .brand{display:flex;align-items:center;gap:9px;font-family:var(--f-cond);font-weight:600;font-size:15px;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
 .mark{width:26px;height:26px;border-radius:4px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font:600 12px var(--f-mono);letter-spacing:0}
-.cmd{flex:1 1 280px;min-width:0;display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:5px;padding:0 10px;height:36px}
+.cmd{position:relative;flex:1 1 280px;min-width:0;display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:5px;padding:0 10px;height:36px}
 .cmd:focus-within{border-color:var(--accent)}
 .cmd .pr{font:600 12px var(--f-mono);color:var(--accent)}
 .cmd input{flex:1;min-width:0;background:none;border:0;outline:none;font-family:var(--f-mono);font-size:13px;text-transform:uppercase}
@@ -75,6 +75,30 @@ button{cursor:pointer}
 .clock{font:500 13px var(--f-mono);color:var(--fg);white-space:nowrap}
 .msg{font:12px var(--f-mono);color:var(--mute);min-height:1em}
 
+/* Vorschläge in der Befehlszeile */
+.sug{position:absolute;left:-1px;right:-1px;top:calc(100% + 4px);z-index:30;background:var(--panel);border:1px solid var(--line2);border-radius:6px;box-shadow:0 12px 32px rgba(0,0,0,.28);overflow:hidden}
+.sug button{display:grid;grid-template-columns:64px minmax(0,1fr) auto auto;gap:10px;align-items:baseline;width:100%;padding:8px 12px;background:none;border:0;text-align:left;font-size:12.5px}
+.sug button[aria-selected="true"],.sug button:hover{background:var(--acc-bg)}
+.sug b{font:600 12.5px var(--f-mono)}
+.sug .nm{color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sug .px{font:12px var(--f-mono)}
+.sug .ch{font:11.5px var(--f-mono);min-width:64px;text-align:right}
+.seg.spd button{padding:5px 9px;font:600 11px var(--f-mono)}
+
+/* Markt-Puls */
+.pulse{display:flex;gap:8px;overflow-x:auto;scrollbar-width:thin;padding-bottom:2px}
+.pc{flex:1 0 132px;min-width:132px;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:8px 10px;display:grid;gap:2px;text-align:left;cursor:pointer}
+.pc:hover{border-color:var(--line2)}
+.pc .k{display:flex;justify-content:space-between;gap:6px;font:600 10.5px var(--f-cond);letter-spacing:.08em;text-transform:uppercase;color:var(--mute)}
+.pc .k span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.pc .k .c{white-space:nowrap;font-family:var(--f-mono);letter-spacing:0;text-transform:none}
+.pc .v{font:500 15px var(--f-mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.pc canvas{width:100%;height:22px;display:block}
+.pc.mood{cursor:default;flex-basis:170px}
+.pc.mood .v{font:600 14px var(--f-cond);letter-spacing:.02em}
+.breadth{height:6px;border-radius:3px;background:var(--down);overflow:hidden;margin-top:4px}
+.breadth i{display:block;height:100%;background:var(--up)}
+
 /* Laufband */
 .tape{overflow:hidden;border-block:1px solid var(--line);background:var(--panel);height:30px;display:flex;align-items:center}
 .tape-in{display:flex;gap:28px;white-space:nowrap;padding-left:16px;animation:tape 70s linear infinite;will-change:transform}
@@ -85,9 +109,9 @@ button{cursor:pointer}
 @media (prefers-reduced-motion:reduce){.tape{overflow-x:auto}.tape-in{animation:none}.pill .dot{animation:none}}
 
 /* Raster */
-.grid{display:grid;gap:10px;grid-template-columns:268px minmax(0,1fr) 370px;grid-template-areas:"watch main bot" "watch depot bot" "watch mb bot" "watch bt bot" "watch news bot";align-items:start}
-@media (max-width:1240px){.grid{grid-template-columns:minmax(0,1fr) 350px;grid-template-areas:"main bot" "depot bot" "mb bot" "watch bot" "bt bt" "news news"}}
-@media (max-width:820px){.grid{grid-template-columns:minmax(0,1fr);grid-template-areas:"main" "depot" "mb" "bt" "bot" "watch" "news"}}
+.grid{display:grid;gap:10px;grid-template-columns:268px minmax(0,1fr) 370px;grid-template-areas:"watch main bot" "watch map bot" "watch depot bot" "watch mb bot" "watch bt bot" "watch news bot";align-items:start}
+@media (max-width:1240px){.grid{grid-template-columns:minmax(0,1fr) 350px;grid-template-areas:"main bot" "map bot" "depot bot" "mb bot" "watch bot" "bt bt" "news news"}}
+@media (max-width:820px){.grid{grid-template-columns:minmax(0,1fr);grid-template-areas:"main" "map" "watch" "depot" "mb" "bt" "bot" "news"}}
 
 /* Depot */
 #depot{grid-area:depot}
@@ -146,6 +170,18 @@ details.txs summary{cursor:pointer;padding:10px 14px;font:600 11px var(--f-cond)
 .tx .r{font-family:var(--f-mono);text-align:right}
 .tag{font:600 9.5px var(--f-cond);letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin-left:6px}
 #bt{grid-area:bt}
+#map{grid-area:map}
+.mapw{padding:10px 12px 12px;display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(230px,1fr))}
+.sec-b{display:grid;gap:5px;align-content:start;min-width:0}
+.sec-h{display:flex;justify-content:space-between;gap:6px;font:600 10.5px var(--f-cond);letter-spacing:.08em;text-transform:uppercase;color:var(--mute)}
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(56px,1fr));gap:3px}
+.tile{min-width:0;height:40px;border:0;border-radius:3px;display:grid;place-content:center;gap:1px;text-align:center;color:var(--fg);background:var(--panel2);padding:0 2px}
+.tile b{font:600 10.5px var(--f-mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tile span{font:10px var(--f-mono);opacity:.85}
+.tile[aria-current="true"]{outline:2px solid var(--accent);outline-offset:-2px}
+.tile:hover{filter:brightness(1.12)}
+.movers{display:flex;gap:14px;flex-wrap:wrap;font:11.5px var(--f-mono);color:var(--mute)}
+.chips2{display:flex;gap:6px;flex-wrap:wrap;margin-top:2px}
 #mb{grid-area:mb}
 .mbbody{display:grid;grid-template-columns:minmax(0,1fr);border-bottom:1px solid var(--line);padding:12px 14px;gap:6px}
 .cv-mb{display:block;width:100%;height:200px}
@@ -175,9 +211,13 @@ table.bt-t{min-width:720px}
 .seg button[aria-pressed="true"]{background:var(--acc-bg);color:var(--accent)}
 
 /* Watchlist */
+.wlctl{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:6px;padding:8px 10px;border-bottom:1px solid var(--line)}
+.wlctl input,.wlctl select,.sel{background:var(--panel2);border:1px solid var(--line2);border-radius:4px;padding:6px 8px;font-size:12px;min-width:0;width:100%}
+.wlctl input{grid-column:1/-1}
+.wlctl input:focus,.wlctl select:focus{outline:none;border-color:var(--accent)}
 #watch{grid-area:watch}
-.wl{display:flex;flex-direction:column;max-height:calc(100vh - 150px);overflow:auto}
-@media (max-width:1240px){.wl{max-height:none}}
+.wl{display:flex;flex-direction:column;max-height:calc(100vh - 210px);min-height:420px;overflow:auto}
+@media (max-width:1240px){.wl{max-height:520px;min-height:0}}
 .wr{display:grid;grid-template-columns:minmax(0,1fr) 58px 92px;gap:8px;align-items:center;padding:7px 12px;background:none;border:0;border-bottom:1px solid var(--line);text-align:left;width:100%}
 .wr:hover{background:var(--panel2)}
 .wr[aria-current="true"]{background:var(--acc-bg);box-shadow:inset 2px 0 0 var(--accent)}
@@ -282,11 +322,13 @@ table.bt-t{min-width:720px}
     <div class="brand"><span class="mark">KW</span>Kurswerk</div>
     <label class="cmd" for="cmd">
       <span class="pr">&gt;</span>
-      <input id="cmd" autocomplete="off" spellcheck="false" placeholder="Titel suchen (z.B. NESN, Apple) oder TOP, NEWS, HILFE">
+      <input id="cmd" autocomplete="off" spellcheck="false" role="combobox" aria-expanded="false" aria-controls="sug" placeholder="Titel suchen (z.B. NESN, Apple, Bitcoin) oder TOP, NEWS, HILFE">
       <kbd>/</kbd>
+      <div class="sug" id="sug" role="listbox" hidden></div>
     </label>
     <div class="status">
       <div class="seg mode" id="modeSw" role="group" aria-label="Modus"><button data-m="live" aria-pressed="false">Live</button><button data-m="sim" aria-pressed="false">Simulation</button></div>
+      <div class="seg spd" id="spd" role="group" aria-label="Tempo der Simulation" hidden><button data-v="0" aria-pressed="false" title="Pause">II</button><button data-v="1" aria-pressed="false">1×</button><button data-v="5" aria-pressed="false">5×</button><button data-v="20" aria-pressed="false">20×</button></div>
       <span class="pill sim" id="dataPill">Simulierte Daten</span>
       <span class="pill"><span class="dot"></span><span id="simday">Handelstag</span></span>
       <span class="clock" id="clock">--:--:--</span>
@@ -294,20 +336,22 @@ table.bt-t{min-width:720px}
   </header>
   <div class="msg" id="msg" aria-live="polite"></div>
   <div class="tape" aria-label="Kurslaufband"><div class="tape-in" id="tape"></div></div>
+  <div class="pulse" id="pulse" aria-label="Marktübersicht"></div>
 
   <div class="grid">
     <section class="panel" id="watch" aria-label="Watchlist">
-      <div class="ph"><span class="lbl">Watchlist</span>
-        <div class="seg" id="wlf">
-          <button aria-pressed="true" data-g="all">Alle</button><button aria-pressed="false" data-g="ch">CH</button><button aria-pressed="false" data-g="us">US</button><button aria-pressed="false" data-g="x">Mehr</button>
-        </div>
+      <div class="ph"><span class="lbl">Watchlist</span><span class="note" id="wlCount"></span></div>
+      <div class="wlctl">
+        <input id="wlq" type="search" placeholder="Name, Kürzel oder Branche" aria-label="Watchlist durchsuchen">
+        <select id="wlg" aria-label="Region"></select>
+        <select id="wls" aria-label="Sortierung"><option value="std">Standard</option><option value="up">Grösste Gewinner</option><option value="dn">Grösste Verlierer</option><option value="sig">Bot-Signal</option><option value="az">Name A–Z</option><option value="dep">Nur mein Depot</option></select>
       </div>
       <div class="wl" id="wl"></div>
     </section>
 
     <section class="panel" id="main" aria-label="Chart">
       <div class="quote">
-        <div class="qn"><div class="sym" id="qSym">—</div><div class="nm" id="qName"></div></div>
+        <div class="qn"><div class="sym" id="qSym">—</div><div class="nm" id="qName"></div><div class="chips2" id="qTags"></div></div>
         <div class="qp"><span class="px" id="qPx">—</span><span class="ccy" id="qCcy"></span><span class="ch" id="qCh"></span></div>
         <span class="chip neu" id="qSig">—</span>
         <button class="btn sm" id="qTrade" style="margin-left:auto">Handeln</button>
@@ -332,6 +376,14 @@ table.bt-t{min-width:720px}
         <canvas class="cv-ind" id="cvInd" aria-label="Indikator"></canvas>
       </div>
       <div class="stats" id="stats"></div>
+    </section>
+
+    <section class="panel" id="map" aria-label="Marktkarte">
+      <div class="ph"><span class="lbl">Marktkarte nach Branchen</span>
+        <div class="seg" id="mapP"><button data-p="1" aria-pressed="true">Heute</button><button data-p="5" aria-pressed="false">1 Woche</button><button data-p="21" aria-pressed="false">1 Monat</button></div>
+      </div>
+      <div class="ph" style="border-bottom:0;padding-bottom:0"><div class="movers" id="movers"></div></div>
+      <div class="mapw" id="mapw"></div>
     </section>
 
     <section class="panel" id="depot" aria-label="Spielgeld-Depot">
@@ -486,18 +538,153 @@ const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
 /* ---------- Instrumente ---------- */
 const DAY_TICKS=120, TICK_MS=1000;
 const INST=[
- ["NESN","Nestlé","ch","CHF",84.7,.16,2,.55],["NOVN","Novartis","ch","CHF",133.78,.18,2,.5],["ROG","Roche","ch","CHF",411.2,.20,2,.5],
- ["UBSG","UBS Group","ch","CHF",39.24,.28,2,.75],["ABBN","ABB","ch","CHF",73.12,.24,2,.7],["ZURN","Zurich Insurance","ch","CHF",621.4,.15,1,.6],
- ["LOGN","Logitech","ch","CHF",81.66,.30,2,.6],
- ["SREN","Swiss Re","ch","CHF",153.35,0.2,2,0.6],["CFR","Richemont","ch","CHF",164.4,0.3,2,0.8],["GIVN","Givaudan","ch","CHF",3973,0.2,0,0.5],["LONN","Lonza","ch","CHF",644.2,0.3,1,0.7],["SIKA","Sika","ch","CHF",178.35,0.26,2,0.8],["HOLN","Holcim","ch","CHF",68.96,0.22,2,0.75],["ALC","Alcon","ch","CHF",59.1,0.22,2,0.55],["GEBN","Geberit","ch","CHF",575.8,0.18,1,0.6],["SCMN","Swisscom","ch","CHF",699.5,0.13,1,0.3],["PGHN","Partners Group","ch","CHF",644,0.28,0,0.9],["SLHN","Swiss Life","ch","CHF",958.2,0.18,1,0.6],["KNIN","Kühne+Nagel","ch","CHF",237.2,0.26,2,0.65],["SOON","Sonova","ch","CHF",281.6,0.26,2,0.6],["UHR","Swatch Group","ch","CHF",175,0.3,2,0.7],
- ["AAPL","Apple","us","USD",348.91,.26,2,.7],["NVDA","Nvidia","us","USD",213.66,.50,2,.8],["MSFT","Microsoft","us","USD",530.14,.24,2,.75],["TSLA","Tesla","us","USD",403.3,.60,2,.6],
- ["AMZN","Amazon","us","USD",243.79,0.3,2,0.9],["GOOGL","Alphabet","us","USD",283.82,0.3,2,0.85],["META","Meta Platforms","us","USD",624.52,0.35,2,0.9],["NFLX","Netflix","us","USD",62.05,0.35,2,0.7],["AMD","AMD","us","USD",566.42,0.5,2,0.9],["JPM","JPMorgan Chase","us","USD",343.58,0.22,2,0.8],["V","Visa","us","USD",410.54,0.18,2,0.7],["KO","Coca-Cola","us","USD",92.82,0.15,2,0.35],["DIS","Disney","us","USD",110.91,0.25,2,0.75],["PLTR","Palantir","us","USD",196.42,0.6,2,0.7],
- ["SMI","Swiss Market Index","x","Pkt",14757,.13,1,.95],["SPX","S&P 500","x","Pkt",7580.1,.15,1,.95],
- ["BTC","Bitcoin","x","USD",77319,.55,0,.2],["XAU","Gold","x","USD/oz",3884.9,.17,1,-.1],["ETH","Ethereum","x","USD",2244.4,0.7,0,0.25],["SOL","Solana","x","USD",96.54,0.85,2,0.25],["XAG","Silber","x","USD/oz",49.135,0.28,2,-0.05],["EURCHF","Euro / Franken","x","",0.9209,.05,4,.15]
-].map(([sym,name,grp,ccy,p,vol,dec,beta])=>({sym,name,grp,ccy,p,vol,dec,beta,hist:[],imp:0,last:p}));
+ ["NESN","Nestlé","ch","CHF",84.7,0.16,2,0.55,"Konsum"],
+ ["NOVN","Novartis","ch","CHF",133.78,0.18,2,0.5,"Gesundheit"],
+ ["ROG","Roche","ch","CHF",411.2,0.2,2,0.5,"Gesundheit"],
+ ["UBSG","UBS Group","ch","CHF",39.24,0.28,2,0.75,"Finanzen"],
+ ["ABBN","ABB","ch","CHF",73.12,0.24,2,0.7,"Industrie"],
+ ["ZURN","Zurich Insurance","ch","CHF",621.4,0.15,1,0.6,"Finanzen"],
+ ["LOGN","Logitech","ch","CHF",81.66,0.3,2,0.6,"Technologie"],
+ ["SREN","Swiss Re","ch","CHF",153.35,0.2,2,0.6,"Finanzen"],
+ ["CFR","Richemont","ch","CHF",164.4,0.3,2,0.8,"Konsum"],
+ ["GIVN","Givaudan","ch","CHF",3973,0.2,0,0.5,"Material"],
+ ["LONN","Lonza","ch","CHF",644.2,0.3,1,0.7,"Gesundheit"],
+ ["SIKA","Sika","ch","CHF",178.35,0.26,2,0.8,"Material"],
+ ["HOLN","Holcim","ch","CHF",68.96,0.22,2,0.75,"Material"],
+ ["ALC","Alcon","ch","CHF",59.1,0.22,2,0.55,"Gesundheit"],
+ ["GEBN","Geberit","ch","CHF",575.8,0.18,1,0.6,"Industrie"],
+ ["SCMN","Swisscom","ch","CHF",699.5,0.13,1,0.3,"Telekom & Medien"],
+ ["PGHN","Partners Group","ch","CHF",644,0.28,0,0.9,"Finanzen"],
+ ["SLHN","Swiss Life","ch","CHF",958.2,0.18,1,0.6,"Finanzen"],
+ ["KNIN","Kühne+Nagel","ch","CHF",237.2,0.26,2,0.65,"Industrie"],
+ ["SOON","Sonova","ch","CHF",281.6,0.26,2,0.6,"Gesundheit"],
+ ["UHR","Swatch Group","ch","CHF",175,0.3,2,0.7,"Konsum"],
+ ["AAPL","Apple","us","USD",348.91,0.26,2,0.7,"Technologie"],
+ ["NVDA","Nvidia","us","USD",213.66,0.5,2,0.8,"Technologie"],
+ ["MSFT","Microsoft","us","USD",530.14,0.24,2,0.75,"Technologie"],
+ ["TSLA","Tesla","us","USD",403.3,0.6,2,0.6,"Konsum"],
+ ["AMZN","Amazon","us","USD",243.79,0.3,2,0.9,"Konsum"],
+ ["GOOGL","Alphabet","us","USD",283.82,0.3,2,0.85,"Technologie"],
+ ["META","Meta Platforms","us","USD",624.52,0.35,2,0.9,"Telekom & Medien"],
+ ["NFLX","Netflix","us","USD",62.05,0.35,2,0.7,"Telekom & Medien"],
+ ["AMD","AMD","us","USD",566.42,0.5,2,0.9,"Technologie"],
+ ["JPM","JPMorgan Chase","us","USD",343.58,0.22,2,0.8,"Finanzen"],
+ ["V","Visa","us","USD",410.54,0.18,2,0.7,"Finanzen"],
+ ["KO","Coca-Cola","us","USD",92.82,0.15,2,0.35,"Konsum"],
+ ["DIS","Disney","us","USD",110.91,0.25,2,0.75,"Telekom & Medien"],
+ ["PLTR","Palantir","us","USD",196.42,0.6,2,0.7,"Technologie"],
+ ["SMI","Swiss Market Index","x","Pkt",14757,0.13,1,0.95,"Indizes"],
+ ["SPX","S&P 500","x","Pkt",7580.1,0.15,1,0.95,"Indizes"],
+ ["BTC","Bitcoin","crypto","USD",77319,0.55,0,0.2,"Krypto"],
+ ["ETH","Ethereum","crypto","USD",2244.4,0.7,0,0.25,"Krypto"],
+ ["SOL","Solana","crypto","USD",96.54,0.85,2,0.25,"Krypto"],
+ ["XAU","Gold","x","USD/oz",3884.9,0.17,1,-0.1,"Rohstoffe"],
+ ["XAG","Silber","x","USD/oz",49.135,0.28,2,-0.05,"Rohstoffe"],
+ ["EURCHF","Euro / Franken","x","CHF",0.9209,0.05,4,0.15,"Devisen"],
+ /* nur in der Simulation */
+ ["BAER","Julius Bär","ch","CHF",58.2,0.26,2,0.8,"Finanzen"],
+ ["BALN","Bâloise","ch","CHF",189.5,0.18,1,0.55,"Finanzen"],
+ ["CLN","Clariant","ch","CHF",9.42,0.3,3,0.8,"Material"],
+ ["EMSN","EMS-Chemie","ch","CHF",652,0.2,1,0.5,"Material"],
+ ["LISN","Lindt & Sprüngli","ch","CHF",110400,0.15,0,0.35,"Konsum"],
+ ["SGSN","SGS","ch","CHF",86.1,0.18,2,0.55,"Industrie"],
+ ["STMN","Straumann","ch","CHF",104.6,0.32,2,0.8,"Gesundheit"],
+ ["TEMN","Temenos","ch","CHF",74.8,0.32,2,0.7,"Technologie"],
+ ["VACN","VAT Group","ch","CHF",331,0.36,1,0.95,"Technologie"],
+ ["BARN","Barry Callebaut","ch","CHF",1185,0.3,0,0.5,"Konsum"],
+ ["SCHP","Schindler","ch","CHF",291,0.2,1,0.6,"Industrie"],
+ ["HELN","Helvetia","ch","CHF",181.2,0.18,1,0.55,"Finanzen"],
+ ["SPSN","Swiss Prime Site","ch","CHF",116.4,0.14,2,0.4,"Immobilien"],
+ ["ADEN","Adecco","ch","CHF",24.9,0.3,2,0.85,"Industrie"],
+ ["GALD","Galderma","ch","CHF",131.5,0.3,2,0.6,"Gesundheit"],
+ ["SDZ","Sandoz","ch","CHF",38.4,0.26,2,0.5,"Gesundheit"],
+ ["BEAN","Belimo","ch","CHF",902,0.3,0,0.75,"Industrie"],
+ ["SQN","Swissquote","ch","CHF",452,0.36,1,0.9,"Finanzen"],
+ ["FHZN","Flughafen Zürich","ch","CHF",231,0.2,1,0.6,"Industrie"],
+ ["PSPN","PSP Swiss Property","ch","CHF",141.3,0.14,2,0.4,"Immobilien"],
+ ["AVGO","Broadcom","us","USD",345,0.45,2,1.0,"Technologie"],
+ ["ORCL","Oracle","us","USD",262,0.4,2,0.85,"Technologie"],
+ ["CRM","Salesforce","us","USD",248,0.32,2,0.85,"Technologie"],
+ ["ADBE","Adobe","us","USD",338,0.32,2,0.8,"Technologie"],
+ ["INTC","Intel","us","USD",38.6,0.48,2,0.9,"Technologie"],
+ ["QCOM","Qualcomm","us","USD",168,0.36,2,0.9,"Technologie"],
+ ["IBM","IBM","us","USD",281,0.24,2,0.65,"Technologie"],
+ ["CSCO","Cisco","us","USD",71.2,0.22,2,0.7,"Technologie"],
+ ["UBER","Uber","us","USD",96.5,0.4,2,0.95,"Technologie"],
+ ["SHOP","Shopify","us","USD",162,0.55,2,1.1,"Technologie"],
+ ["COIN","Coinbase","us","USD",332,0.75,2,0.9,"Finanzen"],
+ ["PYPL","PayPal","us","USD",69.4,0.36,2,0.85,"Finanzen"],
+ ["MA","Mastercard","us","USD",572,0.2,2,0.75,"Finanzen"],
+ ["BAC","Bank of America","us","USD",52.3,0.28,2,0.9,"Finanzen"],
+ ["GS","Goldman Sachs","us","USD",781,0.3,2,0.95,"Finanzen"],
+ ["BRK","Berkshire Hathaway B","us","USD",492,0.15,2,0.6,"Finanzen"],
+ ["WMT","Walmart","us","USD",101.2,0.18,2,0.45,"Konsum"],
+ ["COST","Costco","us","USD",918,0.2,2,0.55,"Konsum"],
+ ["MCD","McDonald's","us","USD",301,0.16,2,0.45,"Konsum"],
+ ["NKE","Nike","us","USD",67.8,0.35,2,0.8,"Konsum"],
+ ["SBUX","Starbucks","us","USD",84.6,0.3,2,0.75,"Konsum"],
+ ["PEP","PepsiCo","us","USD",146,0.16,2,0.4,"Konsum"],
+ ["PG","Procter & Gamble","us","USD",154,0.14,2,0.35,"Konsum"],
+ ["JNJ","Johnson & Johnson","us","USD",186,0.15,2,0.4,"Gesundheit"],
+ ["LLY","Eli Lilly","us","USD",832,0.35,2,0.6,"Gesundheit"],
+ ["PFE","Pfizer","us","USD",25.1,0.25,2,0.5,"Gesundheit"],
+ ["UNH","UnitedHealth","us","USD",331,0.35,2,0.55,"Gesundheit"],
+ ["XOM","ExxonMobil","us","USD",116,0.22,2,0.6,"Energie"],
+ ["CVX","Chevron","us","USD",156,0.22,2,0.65,"Energie"],
+ ["BA","Boeing","us","USD",214,0.36,2,0.9,"Industrie"],
+ ["CAT","Caterpillar","us","USD",531,0.3,2,0.9,"Industrie"],
+ ["GE","GE Aerospace","us","USD",302,0.3,2,0.9,"Industrie"],
+ ["F","Ford","us","USD",12.1,0.36,2,0.9,"Konsum"],
+ ["GM","General Motors","us","USD",70.4,0.36,2,0.95,"Konsum"],
+ ["RIVN","Rivian","us","USD",13.9,0.7,2,1.0,"Konsum"],
+ ["SPOT","Spotify","us","USD",688,0.42,2,0.9,"Telekom & Medien"],
+ ["ABNB","Airbnb","us","USD",126,0.4,2,0.95,"Konsum"],
+ ["ASML","ASML","eu","EUR",905,0.4,1,1.0,"Technologie"],
+ ["SAP","SAP","eu","EUR",231,0.3,2,0.85,"Technologie"],
+ ["SIE","Siemens","eu","EUR",236,0.26,2,0.85,"Industrie"],
+ ["ALV","Allianz","eu","EUR",351,0.2,2,0.75,"Finanzen"],
+ ["MC","LVMH","eu","EUR",592,0.3,1,0.85,"Konsum"],
+ ["OR","L'Oréal","eu","EUR",371,0.22,1,0.6,"Konsum"],
+ ["TTE","TotalEnergies","eu","EUR",55.2,0.22,2,0.65,"Energie"],
+ ["AIR","Airbus","eu","EUR",201,0.28,2,0.85,"Industrie"],
+ ["VOW","Volkswagen","eu","EUR",94.8,0.3,2,0.9,"Konsum"],
+ ["BMW","BMW","eu","EUR",84.6,0.28,2,0.85,"Konsum"],
+ ["DTE","Deutsche Telekom","eu","EUR",28.4,0.16,2,0.45,"Telekom & Medien"],
+ ["ADS","Adidas","eu","EUR",171,0.32,2,0.85,"Konsum"],
+ ["RHM","Rheinmetall","eu","EUR",1812,0.45,0,0.6,"Industrie"],
+ ["MBG","Mercedes-Benz","eu","EUR",55.3,0.28,2,0.85,"Konsum"],
+ ["NVO","Novo Nordisk ADR","us","USD",50.4,0.45,2,0.6,"Gesundheit"],
+ ["TSM","TSMC","as","USD",301,0.4,2,1.0,"Technologie"],
+ ["BABA","Alibaba","as","USD",171,0.46,2,0.8,"Konsum"],
+ ["SONY","Sony","as","USD",28.4,0.3,2,0.7,"Technologie"],
+ ["TM","Toyota","as","USD",196,0.25,2,0.6,"Konsum"],
+ ["TCEHY","Tencent","as","USD",80.6,0.36,2,0.7,"Telekom & Medien"],
+ ["BIDU","Baidu","as","USD",126,0.46,2,0.8,"Technologie"],
+ ["NIO","NIO","as","USD",6.52,0.8,2,1.0,"Konsum"],
+ ["XRP","XRP","crypto","USD",2.41,0.9,3,0.25,"Krypto"],
+ ["BNB","BNB","crypto","USD",1104,0.6,0,0.25,"Krypto"],
+ ["ADA","Cardano","crypto","USD",0.648,0.9,4,0.25,"Krypto"],
+ ["DOGE","Dogecoin","crypto","USD",0.191,1.0,4,0.25,"Krypto"],
+ ["AVAX","Avalanche","crypto","USD",20.4,0.95,2,0.25,"Krypto"],
+ ["DOT","Polkadot","crypto","USD",3.05,0.95,3,0.25,"Krypto"],
+ ["LINK","Chainlink","crypto","USD",17.2,0.9,2,0.25,"Krypto"],
+ ["LTC","Litecoin","crypto","USD",95.4,0.8,2,0.25,"Krypto"],
+ ["TON","Toncoin","crypto","USD",2.21,0.9,3,0.25,"Krypto"],
+ ["NDX","Nasdaq 100","x","Pkt",25120,0.22,1,1.0,"Indizes"],
+ ["DAX","DAX","x","EUR Pkt",24050,0.17,1,0.85,"Indizes"],
+ ["ESTX","Euro Stoxx 50","x","EUR Pkt",5610,0.17,1,0.85,"Indizes"],
+ ["OIL","Rohöl WTI","x","USD/bbl",61.3,0.35,2,0.25,"Rohstoffe"],
+ ["NG","Erdgas","x","USD/MMBtu",3.42,0.6,3,0.1,"Rohstoffe"],
+ ["HG","Kupfer","x","USD/lb",5.04,0.25,3,0.4,"Rohstoffe"],
+ ["PL","Platin","x","USD/oz",1512,0.3,1,0.2,"Rohstoffe"],
+ ["USDCHF","US-Dollar / Franken","x","CHF",0.8025,0.06,4,0.1,"Devisen"],
+ ["GBPCHF","Pfund / Franken","x","CHF",1.062,0.06,4,0.1,"Devisen"]
+].map(([sym,name,grp,ccy,p,vol,dec,beta,sec],k)=>({sym,name,grp,ccy,p,vol,dec,beta,sec,core:k<43,fxc:(ccy==="CHF"||sym==="SMI")?"CHF":ccy.startsWith("EUR")?"EUR":"USD",hist:[],imp:0,last:p}));
 const BY=Object.fromEntries(INST.map(i=>[i.sym,i]));
-const isEq=i=>i.grp!=="x"||i.sym==="SMI"||i.sym==="SPX";
-const VOLBASE={ch:4e6,us:5e7,x:2e5};
+const isEq=i=>["ch","us","eu","as"].includes(i.grp)||["SMI","SPX","NDX","DAX","ESTX"].includes(i.sym);
+const REGION={all:"Alle Regionen",ch:"Schweiz",us:"USA",eu:"Europa",as:"Asien",crypto:"Krypto",x:"Indizes, Rohstoffe, Devisen"};
+const SECTORS=[...new Set(INST.map(s=>s.sec))];
+const VOLBASE={ch:4e6,us:5e7,eu:1e7,as:2e7,crypto:5e5,x:2e5};
 /* gespeichertes Depot laden: Kurse laufen dort weiter, wo sie aufgehört haben */
 const DKEY=LIVE?"kw_depot_live":"kw_depot_v1";let usdchf=0.8045,dep=null;
 try{const raw=localStorage.getItem(DKEY);if(raw){const d=JSON.parse(raw);if(d&&typeof d.cash==="number"&&d.pos){dep=d;if(d.prices&&!LIVE)INST.forEach(s=>{const v=+d.prices[s.sym];if(v>0)s.p=v});if(+d.fx>0)usdchf=+d.fx}}}catch(e){}
@@ -509,16 +696,18 @@ function nextBiz(d){d=new Date(d);do{d.setDate(d.getDate()+1)}while(d.getDay()==
 const N_HIST=262;
 const dates=(()=>{let d=new Date(2026,9,30),a=[d];for(let i=1;i<N_HIST;i++){d=prevBiz(d);a.unshift(d)}return a})();
 
-/* Historie: Faktormodell (Markt + idiosynkratisch), danach auf Zielkurs skaliert */
+/* Historie: Faktormodell (Markt + Branche + idiosynkratisch), danach auf Zielkurs skaliert */
+const secW=s=>s.grp==="crypto"?.55:isEq(s)&&!["Indizes"].includes(s.sec)?.3:0;
+const mkW=s=>s.sec==="Indizes"?s.beta:s.beta*.7;
 (function genHistory(){
   if(LIVE)return;
-  const mkt=dates.map(()=>randn());
+  const mkt=dates.map(()=>randn()),secF=Object.fromEntries(SECTORS.map(k=>[k,dates.map(()=>randn())]));
   for(const s of INST){
-    const sd=s.vol/Math.sqrt(252), mu=(rnd()*.32-.08)/252, b=s.beta, id=Math.sqrt(Math.max(0,1-b*b));
+    const sd=s.vol/Math.sqrt(252), mu=(rnd()*.32-.08)/252, b=mkW(s), sw=secW(s), id=Math.sqrt(Math.max(.04,1-b*b-sw*sw));
     let c=100,raw=[];
     for(let i=0;i<N_HIST;i++){
       const shock=rnd()<.012?randn()*sd*3:0;
-      const r=mu-.5*sd*sd+sd*(b*mkt[i]+id*randn())+shock;
+      const r=mu-.5*sd*sd+sd*(b*mkt[i]+sw*secF[s.sec][i]+id*randn())+shock;
       const o=c*Math.exp(randn()*sd*.25);
       c=c*Math.exp(r);
       const hi=Math.max(o,c)*Math.exp(Math.abs(randn())*sd*.45), lo=Math.min(o,c)*Math.exp(-Math.abs(randn())*sd*.45);
@@ -574,30 +763,44 @@ const TPL={
  XAG:[["Industrielle Nachfrage nach Silber steigt kräftig",.7],["Silberpreis gibt nach schwachen Konjunkturdaten nach",-.6],["Solarindustrie stützt den Silbermarkt",.5]],
  XAU:[["Zentralbanken kaufen mehr Gold als im Vorjahr",.7],["Starker Dollar drückt auf den Goldpreis",-.6],["Geopolitische Spannungen stützen Gold",.5]],
  EURCHF:[["Franken als sicherer Hafen gefragt",-.6],["EZB überrascht mit straffer Geldpolitik",.6],["SNB interveniert offenbar am Devisenmarkt",.5]],
+ crypto:[["{n} steigt nach Listing an grosser Börse",.7],["Grosse Investoren kaufen {n} in grossem Stil",.6],["Sicherheitslücke bei {n} entdeckt",-.8],["Regulierer nimmt {n} ins Visier",-.6],["Entwickler kündigen grosses Update für {n} an",.5]],
+ commodity:[["Angebot knapp: {n} zieht kräftig an",.6],["Starke Nachfrage aus China treibt {n}",.6],["Volle Lager drücken auf {n}",-.6],["Konjunktursorgen belasten {n}",-.5]],
+ fx:[["{n}: Notenbank überrascht die Märkte",.5],["{n} unter Druck nach schwachen Daten",-.5]],
+ secPos:["Branchenstudie: Nachfrage im Sektor {s} zieht deutlich an","Analysten stufen den Sektor {s} hoch","Starke Zahlen beflügeln den ganzen Sektor {s}"],
+ secNeg:["Gewinnwarnungen belasten den Sektor {s}","Neue Auflagen für den Sektor {s} angekündigt","Fonds ziehen Geld aus dem Sektor {s} ab"],
+ crash:[["Ausverkauf an den Weltbörsen: Anleger flüchten aus Aktien",-.95],["Bankenturbulenzen schicken die Märkte auf Talfahrt",-.9],["Rezessionsangst: Breiter Kurssturz an allen Börsen",-.9]],
+ rally:[["Kursfeuerwerk: Notenbanken senken überraschend die Zinsen",.9],["Konjunkturdaten lösen breite Rally aus",.85],["Handelsabkommen beflügelt die Börsen weltweit",.85]],
  macro:[["US-Inflation fällt stärker als erwartet",.7],["Fed signalisiert baldige Zinssenkung",.8],["SNB belässt den Leitzins unverändert",.05],["Ölpreis steigt nach Förderkürzung kräftig",-.5],["Schwache Einkaufsmanagerindizes in Europa",-.55],["Arbeitsmarktdaten aus den USA übertreffen Prognosen",.45],["Handelskonflikt: Neue Zölle angedroht",-.75]]
 };
 let tick=0, news=[], nid=0;
 const pick=a=>a[Math.floor(rnd()*a.length)];
+function pushNews(item,atTick){
+  item.sent=clamp(item.sent,-1,1);item.id=++nid;item.tick=atTick;item.src=item.src||pick(SRC);
+  item.ts=new Date(Date.now()+(atTick-tick)*TICK_MS*4.25);
+  news.unshift(item);if(news.length>150)news.pop();
+  return item;
+}
 function makeNews(atTick,silent){
-  let item;
-  const r=rnd();
-  if(r<.16){const [h,s]=pick(TPL.macro);item={sym:null,head:h,sent:s*(.8+rnd()*.4)}}
+  let item;const r=rnd(),j=v=>v*(.8+rnd()*.4);
+  if(r<.13){const [h,v]=pick(TPL.macro);item={sym:null,head:h,sent:j(v)}}
+  else if(r<.22){const sec=pick(SECTORS.filter(x=>!["Indizes","Krypto","Rohstoffe","Devisen"].includes(x))),pos=rnd()<.5;
+    item={sym:null,sec,head:pick(pos?TPL.secPos:TPL.secNeg).replace("{s}",sec),sent:pos?.5+rnd()*.4:-(.5+rnd()*.4)}}
   else{
     const i=pick(INST);
-    if(TPL[i.sym]){const [h,s]=pick(TPL[i.sym]);item={sym:i.sym,head:h,sent:s*(.8+rnd()*.4)}}
-    else if(i.sym==="SMI"||i.sym==="SPX"){const [h,s]=pick(TPL.macro);item={sym:null,head:h,sent:s*(.8+rnd()*.4)}}
+    if(TPL[i.sym]){const [h,v]=pick(TPL[i.sym]);item={sym:i.sym,head:h,sent:j(v)}}
+    else if(i.sec==="Indizes"){const [h,v]=pick(TPL.macro);item={sym:null,head:h,sent:j(v)}}
+    else if(i.grp==="crypto"||i.sec==="Rohstoffe"||i.sec==="Devisen"){const [h,v]=pick(TPL[i.grp==="crypto"?"crypto":i.sec==="Rohstoffe"?"commodity":"fx"]);item={sym:i.sym,head:h.replace("{n}",i.name),sent:j(v)}}
     else{
       const q=rnd(),kind=q<.42?"eqPos":q<.82?"eqNeg":"eqNeu";
       const base=kind==="eqPos"?.45+rnd()*.5:kind==="eqNeg"?-(.45+rnd()*.5):(rnd()-.5)*.25;
-      const k=fmt(i.last*(kind==="eqPos"?1.12+rnd()*.1:.85),0)+" "+i.ccy;
+      const k=fmt(i.last*(kind==="eqPos"?1.12+rnd()*.1:.85),i.last<20?2:0)+" "+i.ccy.replace(" Pkt","");
       item={sym:i.sym,head:pick(TPL[kind]).replace("{n}",i.name).replace("{k}",k).replace("{b}",fmt(1+rnd()*9,1)),sent:base};
     }
   }
-  item.sent=clamp(item.sent,-1,1);item.id=++nid;item.tick=atTick;item.src=pick(SRC);
-  item.ts=new Date(Date.now()+(atTick-tick)*TICK_MS*4.25);
-  news.unshift(item);if(news.length>80)news.pop();
+  pushNews(item,atTick);
   // Kurswirkung
-  if(item.sym){BY[item.sym].imp+=item.sent*.006}
+  if(item.sym)BY[item.sym].imp+=item.sent*.006;
+  else if(item.sec)INST.forEach(s=>{if(s.sec===item.sec)s.imp+=item.sent*.004});
   else INST.forEach(s=>{if(isEq(s))s.imp+=item.sent*.0035*Math.max(.3,s.beta)});
   if(!silent)renderNews(item.id);
   return item;
@@ -663,7 +866,8 @@ function runMC(s,a){
 }
 
 /* ---------- Zustand ---------- */
-let sel="NESN",range=130,ctype="c",ind="rsi",wlGroup="all",newsMode="all",hover=null,analysis={};
+let speed=1;try{const v=localStorage.getItem("kw_speed");if(v!==null&&[0,1,5,20].includes(+v))speed=+v}catch(e){}
+let sel="NESN",range=130,ctype="c",ind="rsi",wlGroup="all",wlQuery="",wlSort="std",mapP=1,newsMode="all",hover=null,analysis={};
 try{const v=localStorage.getItem("kw_sel");if(v&&BY[v])sel=v;const r=+localStorage.getItem("kw_range");if([66,130,252].includes(r))range=r}catch(e){}
 if(!BY[sel])sel=INST[0].sym;
 const cur=()=>BY[sel];
@@ -792,31 +996,76 @@ function drawMC(){
 const wl=$("#wl"),rows={};
 INST.forEach(s=>{
   const b=document.createElement("button");b.className="wr";b.dataset.sym=s.sym;b.dataset.g=s.grp;
-  b.innerHTML=`<div style="min-width:0"><div class="s">${s.sym}</div><div class="n">${s.name}</div></div><canvas></canvas><div><div class="p mono"></div><div class="c"></div></div>`;
+  b.innerHTML=`<div style="min-width:0"><div class="s">${s.sym}</div><div class="n">${esc(s.name)}</div></div><canvas></canvas><div><div class="p mono"></div><div class="c"></div></div>`;
   b.onclick=()=>select(s.sym);wl.appendChild(b);rows[s.sym]={el:b,cv:b.querySelector("canvas"),p:b.querySelector(".p"),c:b.querySelector(".c"),shown:null};
 });
 const tape=$("#tape");
-tape.style.animationDuration=Math.round(INST.length*4.5)+"s";
-tape.innerHTML=[0,1].map(()=>INST.map(s=>`<span class="ti" data-tape="${s.sym}"><b>${s.sym}</b><span class="tp"></span><span class="tc"></span></span>`).join("")).join("");
+const TAPE=INST.filter(s=>s.core||["NDX","DAX","OIL","USDCHF"].includes(s.sym));
+tape.style.animationDuration=Math.round(TAPE.length*4.5)+"s";
+tape.innerHTML=[0,1].map(()=>TAPE.map(s=>`<span class="ti" data-tape="${s.sym}"><b>${s.sym}</b><span class="tp"></span><span class="tc"></span></span>`).join("")).join("");
 
 function chgOf(s){const H=s.hist,pc=H[H.length-2].c,c=H[H.length-1].c;return{c,d:c-pc,p:c/pc-1}}
 function spark(cv,s){const{ctx,w,h}=fit(cv),a=s.hist.slice(-40).map(k=>k.c),lo=Math.min(...a),hi=Math.max(...a)||1,c=a[a.length-1]>=a[0]?COL.up:COL.down;ctx.beginPath();a.forEach((v,i)=>{const x=i/(a.length-1)*w,y=2+(hi-v)/(hi-lo||1)*(h-4);i?ctx.lineTo(x,y):ctx.moveTo(x,y)});ctx.strokeStyle=c;ctx.lineWidth=1.2;ctx.stroke()}
+let wlOrder="";
 function renderWatch(){
+  const q=wlQuery.trim().toLowerCase();
+  const vis=INST.filter(s=>(wlGroup==="all"||s.grp===wlGroup)&&(!q||s.sym.toLowerCase().includes(q)||s.name.toLowerCase().includes(q)||s.sec.toLowerCase().includes(q))&&(wlSort!=="dep"||dep.pos[s.sym]));
+  const chg=Object.fromEntries(INST.map(s=>[s.sym,chgOf(s)]));
+  if(wlSort==="up")vis.sort((a,b)=>chg[b.sym].p-chg[a.sym].p);else if(wlSort==="dn")vis.sort((a,b)=>chg[a.sym].p-chg[b.sym].p);
+  else if(wlSort==="sig")vis.sort((a,b)=>(analysis[b.sym]?.score??0)-(analysis[a.sym]?.score??0));else if(wlSort==="az")vis.sort((a,b)=>a.name.localeCompare(b.name,"de"));
+  const vs=new Set(vis.map(s=>s.sym)),key=vis.map(s=>s.sym).join(",");
+  if(key!==wlOrder){wlOrder=key;for(const s of vis)wl.appendChild(rows[s.sym].el)}
+  $("#wlCount").textContent=`${vis.length} von ${INST.length}`;
+  const box=wl.getBoundingClientRect(),drawSpark=!renderWatch._n||renderWatch._n++%3===0;renderWatch._n=(renderWatch._n||0)+1;
   for(const s of INST){
-    const r=rows[s.sym],q=chgOf(s);
-    r.el.hidden=!(wlGroup==="all"||s.grp===wlGroup);
+    const r=rows[s.sym],c=chg[s.sym];
+    r.el.hidden=!vs.has(s.sym);
+    if(r.el.hidden)continue;
     r.el.setAttribute("aria-current",s.sym===sel?"true":"false");
     r.el.querySelector(".s").classList.toggle("held",!!dep.pos[s.sym]);
-    if(r.el.hidden)continue;
-    r.p.textContent=fmt(q.c,s.dec);r.c.textContent=pct(q.p);r.c.className="c "+sgn(q.p);
-    if(r.shown!=null&&q.c!==r.shown){r.el.classList.remove("flash-up","flash-down");void r.el.offsetWidth;r.el.classList.add(q.c>r.shown?"flash-up":"flash-down")}
-    r.shown=q.c;spark(r.cv,s);
+    r.p.textContent=fmt(c.c,s.dec);r.c.textContent=pct(c.p);r.c.className="c "+sgn(c.p);
+    if(r.shown!=null&&c.c!==r.shown){r.el.classList.remove("flash-up","flash-down");void r.el.offsetWidth;r.el.classList.add(c.c>r.shown?"flash-up":"flash-down")}
+    r.shown=c.c;
+    const rb=r.el.getBoundingClientRect();if(rb.bottom>=box.top-40&&rb.top<=box.bottom+40&&(drawSpark||!r.drawn)){spark(r.cv,s);r.drawn=true}
   }
-  for(const s of INST){const q=chgOf(s);document.querySelectorAll(`[data-tape="${s.sym}"]`).forEach(el=>{el.querySelector(".tp").textContent=fmt(q.c,s.dec);const c=el.querySelector(".tc");c.textContent=pct(q.p);c.className="tc "+sgn(q.p)})}
+  for(const s of TAPE){const c=chg[s.sym];document.querySelectorAll(`[data-tape="${s.sym}"]`).forEach(el=>{el.querySelector(".tp").textContent=fmt(c.c,s.dec);const x=el.querySelector(".tc");x.textContent=pct(c.p);x.className="tc "+sgn(c.p)})}
+  renderPulse();renderMap();
+}
+/* Markt-Puls: wichtigste Indizes und Märkte, dazu Marktbreite */
+const PLBL={SMI:"SMI",SPX:"S&P 500",NDX:"Nasdaq 100",DAX:"DAX",BTC:"Bitcoin",ETH:"Ethereum",XAU:"Gold",XAG:"Silber",OIL:"Öl WTI",EURCHF:"EUR/CHF",USDCHF:"USD/CHF"};
+const PULSE=["SMI","SPX","NDX","DAX","BTC","ETH","XAU","XAG","OIL","EURCHF","USDCHF"].filter(k=>BY[k]&&(k!=="XAG"||!BY.OIL));
+const pulse=$("#pulse");
+pulse.innerHTML=`<div class="pc mood"><div class="k"><span>Marktbreite</span><span id="mPhase"></span></div><div class="v" id="mBreadth">—</div><div class="breadth"><i id="mBar" style="width:50%"></i></div></div>`+PULSE.map(k=>`<button class="pc" data-sym="${k}"><div class="k"><span>${esc(PLBL[k]||BY[k].name)}</span><span class="c"></span></div><div class="v"></div><canvas></canvas></button>`).join("");
+pulse.addEventListener("click",e=>{const b=e.target.closest("[data-sym]");if(b)select(b.dataset.sym)});
+function renderPulse(){
+  const up=INST.filter(s=>chgOf(s).p>0).length,share=up/INST.length;
+  $("#mBreadth").textContent=`${up} von ${INST.length} im Plus`;$("#mBar").style.width=(share*100).toFixed(0)+"%";
+  const ph=$("#mPhase");
+  if(!LIVE&&MKT.left>0){ph.textContent=MKT.phase==="crash"?"Ausverkauf":"Rally";ph.className=MKT.phase==="crash"?"down":"up"}
+  else{ph.textContent=share>.65?"freundlich":share<.35?"schwach":"gemischt";ph.className=share>.65?"up":share<.35?"down":""}
+  pulse.querySelectorAll("button[data-sym]").forEach(b=>{const s=BY[b.dataset.sym],c=chgOf(s),x=b.querySelector(".c");
+    b.querySelector(".v").textContent=fmt(c.c,s.dec);x.textContent=pct(c.p);x.className="c "+sgn(c.p);
+    const cv=b.querySelector("canvas");if(!cv._t||Date.now()-cv._t>3000){cv._t=Date.now();spark(cv,s)}});
+}
+/* Marktkarte: Kacheln nach Branche, Farbe nach Kursveränderung */
+const mapw=$("#mapw"),tiles={};
+mapw.innerHTML=SECTORS.map(sec=>`<div class="sec-b" data-sec="${esc(sec)}"><div class="sec-h"><span>${esc(sec)}</span><span class="avg"></span></div><div class="tiles">${INST.filter(s=>s.sec===sec).map(s=>`<button class="tile" data-sym="${s.sym}" title="${esc(s.name)}"><b>${s.sym}</b><span></span></button>`).join("")}</div></div>`).join("");
+mapw.querySelectorAll(".tile").forEach(t=>tiles[t.dataset.sym]=t);
+mapw.addEventListener("click",e=>{const b=e.target.closest("[data-sym]");if(b)select(b.dataset.sym)});
+const perf=(s,n)=>{const H=s.hist,c=H[H.length-1].c,b=H[Math.max(0,H.length-1-n)].c;return c/b-1};
+function renderMap(){
+  const scale=mapP===1?.03:mapP===5?.07:.14,P={};
+  for(const s of INST)P[s.sym]=perf(s,mapP);
+  for(const s of INST){const t=tiles[s.sym],v=P[s.sym],a=Math.min(1,Math.abs(v)/scale);
+    t.style.background=`color-mix(in srgb, ${v>=0?"var(--up)":"var(--down)"} ${Math.round(12+a*68)}%, var(--panel2))`;
+    t.querySelector("span").textContent=(v>=0?"+":"−")+fmt(Math.abs(v*100),1)+"%";t.setAttribute("aria-current",s.sym===sel?"true":"false")}
+  mapw.querySelectorAll(".sec-b").forEach(b=>{const m=INST.filter(s=>s.sec===b.dataset.sec),avg=m.reduce((a,s)=>a+P[s.sym],0)/m.length,el=b.querySelector(".avg");el.textContent=pct(avg,1);el.className="avg "+sgn(avg)});
+  const srt=INST.filter(s=>isEq(s)||s.grp==="crypto").sort((a,b)=>P[b.sym]-P[a.sym]),lbl={1:"heute",5:"Woche",21:"Monat"}[mapP];
+  $("#movers").innerHTML=`<span>Top ${lbl}: ${srt.slice(0,3).map(s=>`<b class="up">${s.sym} ${pct(P[s.sym],1)}</b>`).join(" · ")}</span><span>Flop: ${srt.slice(-3).reverse().map(s=>`<b class="down">${s.sym} ${pct(P[s.sym],1)}</b>`).join(" · ")}</span>`;
 }
 function renderQuote(){
   const s=cur(),q=chgOf(s),a=analysis[s.sym],H=s.hist,t=H[H.length-1];
-  $("#qSym").textContent=s.sym;$("#qName").textContent=s.name;$("#qPx").textContent=fmt(q.c,s.dec);$("#qCcy").textContent=s.ccy;
+  $("#qSym").textContent=s.sym;$("#qName").textContent=s.name;$("#qTags").innerHTML=`<span class="chip neu">${esc(s.sec)}</span><span class="chip neu">${REGION[s.grp]}</span>`;$("#qPx").textContent=fmt(q.c,s.dec);$("#qCcy").textContent=s.ccy;
   const ch=$("#qCh");ch.textContent=`${q.d>=0?"+":"−"}${fmt(Math.abs(q.d),s.dec)}  ${pct(q.p)}`;ch.className="ch "+sgn(q.d);
   const sig=$("#qSig");sig.textContent="Signal: "+a.label;sig.className="chip "+(a.score>=15?"up":a.score<=-15?"down":"neu");
   const yr=H.slice(-252),lo=Math.min(...yr.map(k=>k.l)),hi=Math.max(...yr.map(k=>k.h)),pos=(q.c-lo)/(hi-lo)*100;
@@ -843,14 +1092,13 @@ const dfmt=new Intl.DateTimeFormat("de-CH",{day:"2-digit",month:"2-digit",timeZo
 const ntime=d=>dfmt.format(d)===dfmt.format(new Date())?tfmt.format(d):dfmt.format(d);
 function renderNews(newId){
   const list=newsMode==="sel"?news.filter(n=>n.sym===sel||!n.sym):news;
-  $("#nl").innerHTML=list.slice(0,50).map(n=>{const sc=n.sent>.15?"up":n.sent<-.15?"down":"muted";return`<div class="ni${n.id===newId?" new":""}"><span class="t">${ntime(n.ts)}</span><button class="sy${n.sym?"":" macro"}" ${n.sym?`data-sym="${n.sym}"`:"disabled"}>${n.sym||"MAKRO"}</button><div class="h">${n.url?`<a href="${esc(n.url)}" target="_blank" rel="noopener">${esc(n.head)}</a>`:esc(n.head)}<small>${esc(n.src)}</small></div><span class="se ${sc}">${n.sent>=0?"+":"−"}${fmt(Math.abs(n.sent),2)}</span></div>`}).join("")||`<div class="ni"><span></span><span></span><div class="h muted">Noch keine Meldungen zu diesem Titel.</div></div>`;
+  $("#nl").innerHTML=list.slice(0,50).map(n=>{const sc=n.sent>.15?"up":n.sent<-.15?"down":"muted";return`<div class="ni${n.id===newId?" new":""}"><span class="t">${ntime(n.ts)}</span><button class="sy${n.sym?"":" macro"}" ${n.sym?`data-sym="${n.sym}"`:"disabled"}>${n.sym||(n.sec?esc(n.sec):"MAKRO")}</button><div class="h">${n.url?`<a href="${esc(n.url)}" target="_blank" rel="noopener">${esc(n.head)}</a>`:esc(n.head)}<small>${esc(n.src)}</small></div><span class="se ${sc}">${n.sent>=0?"+":"−"}${fmt(Math.abs(n.sent),2)}</span></div>`}).join("")||`<div class="ni"><span></span><span></span><div class="h muted">Noch keine Meldungen zu diesem Titel.</div></div>`;
 }
 /* ---------- Depot ---------- */
-const START=100000,QD={BTC:4,ETH:3,SOL:2,XAU:2};
+const START=100000,QD={BTC:4,ETH:3,SOL:2,BNB:3,LTC:2,AVAX:2,LINK:2,XAU:2,PL:2};
 const qd=s=>QD[s.sym]||0;
-const fxOf=s=>(s.ccy==="CHF"||s.sym==="SMI"||s.sym==="EURCHF")?1:usdchf;
-const CRYPTO=new Set(["BTC","ETH","SOL"]);
-const hsOf=s=>CRYPTO.has(s.sym)?.001:s.grp==="x"?.0003:.0005;
+const fxOf=s=>s.fxc==="CHF"?1:s.fxc==="EUR"?(BY.EURCHF?BY.EURCHF.last:.93):usdchf;
+const hsOf=s=>s.grp==="crypto"?.001:s.grp==="x"?.0003:.0005;
 const feeOf=v=>clamp(v*.001,5,40);
 const avgPx=(s,p)=>p.pq!=null&&p.q>0?p.pq/p.q:p.cost/p.q/fxOf(s);
 const floorQ=(x,s)=>{const m=10**qd(s);return Math.max(0,Math.floor(x*m+1e-9)/m)};
@@ -1072,8 +1320,16 @@ function renderAll(){renderWatch();renderQuote();renderBot();renderDepot();drawA
 /* ---------- Interaktion ---------- */
 function select(sym){if(!BY[sym])return;sel=sym;hover=null;try{localStorage.setItem("kw_sel",sym)}catch(e){}runMC(cur(),analysis[sym]);oQty.value="";oMsg.textContent="";renderQuick();renderAll();renderNews();resetAsk()}
 function segBind(id,attr,fn){$(id).addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;$(id).querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x===b?"true":"false"));fn(b.dataset[attr])})}
-segBind("#wlf","g",g=>{wlGroup=g;renderWatch()});
 segBind("#ctype","t",t=>{ctype=t;drawMain()});
+segBind("#mapP","p",v=>{mapP=+v;renderMap()});
+/* Watchlist-Steuerung */
+$("#wlg").innerHTML=Object.entries(REGION).filter(([k])=>k==="all"||INST.some(s=>s.grp===k)).map(([k,v])=>`<option value="${k}">${v}</option>`).join("");
+$("#wlq").addEventListener("input",e=>{wlQuery=e.target.value;renderWatch()});
+$("#wlg").addEventListener("change",e=>{wlGroup=e.target.value;renderWatch()});
+$("#wls").addEventListener("change",e=>{wlSort=e.target.value;renderWatch()});
+/* Tempo der Simulation */
+if(!LIVE){const sp=$("#spd");sp.hidden=false;const mark=()=>sp.querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",+b.dataset.v===speed?"true":"false"));mark();
+  sp.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;speed=+b.dataset.v;try{localStorage.setItem("kw_speed",speed)}catch(x){}mark();say(speed?`Tempo ${speed}×: ${speed===1?"ein Handelstag dauert 2 Minuten":`ein Handelstag dauert ${Math.round(120/speed)} Sekunden`}.`:"Simulation pausiert.")})}
 segBind("#crange","r",r=>{range=+r;try{localStorage.setItem("kw_range",r)}catch(e){}drawAll()});
 segBind("#itab","i",i=>{ind=i;$("#indLbl").textContent=i==="rsi"?"RSI 14":"MACD 12/26/9";drawInd()});
 segBind("#nf","n",n=>{newsMode=n;renderNews()});
@@ -1085,44 +1341,82 @@ function hoverAt(e,cv){const r=cv.getBoundingClientRect(),g=cvMain._geom;if(!g)r
 const cmd=$("#cmd"),msg=$("#msg");
 function say(t){msg.textContent=t;clearTimeout(say._t);say._t=setTimeout(()=>msg.textContent="",5000)}
 document.addEventListener("keydown",e=>{if(e.key==="/"&&document.activeElement.tagName!=="INPUT"){e.preventDefault();cmd.focus()}});
+const sug=$("#sug");let sugList=[],sugIdx=-1;
+function findInst(q){q=q.trim().toLowerCase();if(!q)return[];const sc=s=>s.sym.toLowerCase()===q?0:s.sym.toLowerCase().startsWith(q)?1:s.name.toLowerCase().startsWith(q)?2:s.name.toLowerCase().includes(q)?3:s.sec.toLowerCase().includes(q)?4:9;
+  return INST.map(s=>[sc(s),s]).filter(x=>x[0]<9).sort((a,b)=>a[0]-b[0]).slice(0,7).map(x=>x[1])}
+function showSug(){
+  sugList=findInst(cmd.value);sugIdx=sugList.length?0:-1;
+  if(!sugList.length){sug.hidden=true;cmd.setAttribute("aria-expanded","false");return}
+  sug.innerHTML=sugList.map((s,k)=>{const c=chgOf(s);return`<button type="button" role="option" data-sym="${s.sym}" aria-selected="${k===sugIdx}"><b>${s.sym}</b><span class="nm">${esc(s.name)} · ${esc(s.sec)}</span><span class="px">${fmt(c.c,s.dec)}</span><span class="ch ${sgn(c.p)}">${pct(c.p)}</span></button>`}).join("");
+  sug.hidden=false;cmd.setAttribute("aria-expanded","true");
+}
+function hideSug(){sug.hidden=true;cmd.setAttribute("aria-expanded","false")}
+cmd.addEventListener("input",showSug);
+cmd.addEventListener("blur",()=>setTimeout(hideSug,150));
+sug.addEventListener("mousedown",e=>{const b=e.target.closest("[data-sym]");if(!b)return;e.preventDefault();cmd.value="";hideSug();select(b.dataset.sym);cmd.blur()});
 cmd.addEventListener("keydown",e=>{
-  if(e.key==="Escape"){cmd.value="";cmd.blur();return}
+  if(!sug.hidden&&(e.key==="ArrowDown"||e.key==="ArrowUp")){e.preventDefault();sugIdx=(sugIdx+(e.key==="ArrowDown"?1:-1)+sugList.length)%sugList.length;sug.querySelectorAll("button").forEach((b,k)=>b.setAttribute("aria-selected",k===sugIdx?"true":"false"));return}
+  if(e.key==="Escape"){cmd.value="";hideSug();cmd.blur();return}
   if(e.key!=="Enter")return;
-  const q=cmd.value.trim().toUpperCase().replace(/\s+GO$/,"");cmd.value="";if(!q)return;
-  if(q==="HILFE"||q==="HELP"){say("Befehle: Kürzel oder Name (NESN, Apple) · TOP = Scanner · NEWS = Nachrichten · 3M/6M/1J = Zeitraum · Taste / fokussiert die Zeile");return}
+  const q=cmd.value.trim().toUpperCase().replace(/\s+GO$/,"");
+  if(!sug.hidden&&sugIdx>=0&&!["HILFE","HELP","TOP","NEWS","3M","6M","1J","1Y"].includes(q)){const s=sugList[sugIdx];cmd.value="";hideSug();select(s.sym);say(`${s.sym} · ${s.name} geladen`);return}
+  cmd.value="";hideSug();if(!q)return;
+  if(q==="HILFE"||q==="HELP"){say("Befehle: Kürzel, Name oder Branche (NESN, Apple, Krypto) · TOP = Scanner · NEWS = Nachrichten · 3M/6M/1J = Zeitraum · Taste / fokussiert die Zeile");return}
   if(q==="TOP"){$("#scanSec").scrollIntoView({behavior:"smooth",block:"center"});return}
   if(q==="NEWS"){$("#news").scrollIntoView({behavior:"smooth",block:"start"});return}
   const rmap={"3M":66,"6M":130,"1J":252,"1Y":252};if(rmap[q]){document.querySelector(`#crange [data-r="${rmap[q]}"]`).click();return}
-  const hit=BY[q]||INST.find(s=>s.name.toUpperCase().startsWith(q))||INST.find(s=>s.name.toUpperCase().includes(q));
+  const hit=findInst(q)[0];
   if(hit){select(hit.sym);say(`${hit.sym} · ${hit.name} geladen`)}else say(`Kein Titel gefunden für «${q}». Tippe HILFE für alle Befehle.`);
 });
 
 /* ---------- Simulation ---------- */
+/* Marktphasen, Quartalszahlen und Zeitsteuerung */
+const MKT={drift:0,left:0,phase:"normal"};
+let simDay=0;
+INST.forEach(s=>{if(isEq(s)&&s.sec!=="Indizes"){s.earnDay=Math.floor(rnd()*60);s.earnTick=null}});
+function marketEvent(kind){
+  const [h,v]=pick(TPL[kind]);MKT.phase=kind;MKT.left=30+Math.floor(rnd()*30);MKT.drift=kind==="crash"?-(.0012+rnd()*.0012):(.0009+rnd()*.0009);
+  pushNews({sym:null,head:h,sent:v},tick);
+}
+function earnings(s){
+  const z=randn()*1.1,pos=z>.3,neg=z<-.3;
+  const head=pos?`${s.name}: Quartalsgewinn deutlich über den Erwartungen`:neg?`${s.name}: Quartalszahlen enttäuschen, Aktie unter Druck`:`${s.name}: Quartalszahlen im Rahmen der Erwartungen`;
+  s.imp+=z*.012;pushNews({sym:s.sym,head,sent:Math.tanh(z*.8),src:"Unternehmensmeldung"},tick);
+}
 function stepMarket(){
   tick++;
-  const m=randn();
-  usdchf*=Math.exp(randn()*.07/Math.sqrt(252)/Math.sqrt(DAY_TICKS));
+  const m=randn(),secF={};for(const k of SECTORS)secF[k]=randn();
+  const shockVol=MKT.left>0&&MKT.phase==="crash"?1.6:1;
+  if(MKT.left>0){if(--MKT.left===0){MKT.drift=0;MKT.phase="normal"}}
+  if(!BY.USDCHF)usdchf*=Math.exp(randn()*.07/Math.sqrt(252)/Math.sqrt(DAY_TICKS));
   for(const s of INST){
-    const sd=s.vol/Math.sqrt(252)/Math.sqrt(DAY_TICKS),b=s.beta,id=Math.sqrt(Math.max(0,1-b*b));
-    const r=sd*(b*m+id*randn())+s.imp*.08;s.imp*=.985;
+    const sd=s.vol/Math.sqrt(252)/Math.sqrt(DAY_TICKS)*shockVol,b=mkW(s),sw=secW(s),id=Math.sqrt(Math.max(.04,1-b*b-sw*sw));
+    const r=sd*(b*m+sw*secF[s.sec]+id*randn())+s.imp*.08+(isEq(s)||s.grp==="crypto"?b*MKT.drift:0);s.imp*=.985;
     const t=s.hist[s.hist.length-1];t.c*=Math.exp(r);t.h=Math.max(t.h,t.c);t.l=Math.min(t.l,t.c);t.v+=VOLBASE[s.grp]/DAY_TICKS*(.5+rnd())*(1+Math.abs(r)/sd*.3);s.last=t.c;
+    if(s.earnTick===tick){s.earnTick=null;earnings(s)}
   }
+  if(BY.USDCHF)usdchf=BY.USDCHF.last;
   if(tick%DAY_TICKS===0){
-    for(const s of INST){const t=s.hist[s.hist.length-1],sd=s.vol/Math.sqrt(252),o=t.c*Math.exp(randn()*sd*.2);s.hist.push({d:nextBiz(t.d),o,h:o,l:o,c:o,v:0});if(s.hist.length>400)s.hist.shift()}
+    simDay++;
+    for(const s of INST){const t=s.hist[s.hist.length-1],sd=s.vol/Math.sqrt(252),o=t.c*Math.exp(randn()*sd*.2);s.hist.push({d:nextBiz(t.d),o,h:o,l:o,c:o,v:0});if(s.hist.length>400)s.hist.shift()
+      if(s.earnDay!=null&&s.earnDay<=simDay){s.earnTick=tick+5+Math.floor(rnd()*(DAY_TICKS-10));s.earnDay+=58+Math.floor(rnd()*10)}}
+    if(MKT.left===0){const q=rnd();if(q<.012)marketEvent("crash");else if(q<.024)marketEvent("rally")}
     dep.dayStart=totals().val;btKey="";setTimeout(()=>renderBt(),0);
-    say("Neuer Handelstag in der Simulation eröffnet");
   }
 }
 function updateDay(){if(LIVE){const m=Math.max(0,Math.round((Date.now()-LIVE.updated)/60000));$("#simday").textContent=`Stand ${tfmt.format(new Date(LIVE.updated))} · ${m<1?"gerade eben":"vor "+m+" Min."}`;return}const d=cur().hist[cur().hist.length-1].d,prog=(tick%DAY_TICKS)/DAY_TICKS,min=9*60+Math.round(prog*510);$("#simday").textContent=`Handelstag ${d.getDate()}.${d.getMonth()+1}. · ${String(Math.floor(min/60)).padStart(2,"0")}:${String(min%60).padStart(2,"0")}`}
 function analyzeAll(){for(const s of INST)analysis[s.sym]=analyze(s)}
 let nextNews=6;
 function loop(){
-  stepMarket();
-  if(--nextNews<=0){makeNews(tick);nextNews=6+Math.floor(rnd()*9)}
+  if(!speed)return;
+  const t0=tick;let newsId=null;
+  for(let k=0;k<speed;k++){stepMarket();if(--nextNews<=0){newsId=makeNews(tick,true).id;nextNews=6+Math.floor(rnd()*9)}}
+  const crossed=n=>Math.floor(tick/n)>Math.floor(t0/n);
   analyzeAll();
-  if(tick%10===0)autopilot();
-  if(tick%5===0){recordEq();saveDepot()}
-  if(tick%6===0)runMC(cur(),analysis[sel]);
+  if(crossed(10))autopilot();
+  if(crossed(5)){recordEq();saveDepot()}
+  if(crossed(6))runMC(cur(),analysis[sel]);
+  if(nid!==loop._nid){renderNews(nid);loop._nid=nid}
   updateDay();renderAll();
 }
 
