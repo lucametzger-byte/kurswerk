@@ -145,5 +145,15 @@ function compare(insts,v2=V3){
   return{dates,v1:{eq:a.eq,closed:a.closed,st:stats(a.eq,a.closed,a.fees),half:halves(a.eq),open:a.open},v2:{eq:b.eq,closed:b.closed,st:stats(b.eq,b.closed,b.fees),half:halves(b.eq),open:b.open},
     smi:{eq:smi,st:stats(smi),half:halves(smi)},ew:{eq:ew,st:stats(ew),half:halves(ew)},bm};
 }
-return{prep,score,run,runRot,momOf,pickRot,hold,stats,compare,V1,V2,V3,feeOf};
+
+/* alle Strategien im selben Zeitfenster vergleichen */
+function compareAll(insts){
+  const ref=insts.SMI||insts[Object.keys(insts)[0]],startDate=ref.rows[Math.min(130,Math.floor(ref.rows.length/2))][0];
+  const pack=r=>({eq:r.eq,closed:r.closed,st:stats(r.eq,r.closed,r.fees),half:halves(r.eq),open:r.open});
+  const alt=pack(run(insts,V1,100000,startDate)),core=pack(run(insts,V2,100000,startDate)),rot=pack(runRot(insts,V3,startDate));
+  const dates=core.eq.map(e=>e[0]),bm=insts.SMI?"SMI":Object.keys(insts)[0];
+  const sm=hold(insts,[bm],dates),ew=hold(insts,Object.keys(insts).filter(s=>s!=="EURCHF"),dates);
+  return{dates,alt,core,rot,smi:{eq:sm,st:stats(sm),half:halves(sm)},ew:{eq:ew,st:stats(ew),half:halves(ew)},bm};
+}
+return{compareAll,prep,score,run,runRot,momOf,pickRot,hold,stats,compare,V1,V2,V3,feeOf};
 })();
