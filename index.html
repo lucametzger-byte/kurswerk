@@ -285,6 +285,13 @@ table.bt-t{min-width:720px}
 .fac .bar::before{content:"";position:absolute;left:50%;top:-2px;bottom:-2px;width:1px;background:var(--line2)}
 .fac .bar i{position:absolute;top:0;bottom:0;border-radius:3px}
 .fac .fv{text-align:right;font:11.5px var(--f-mono)}
+.conf b{color:var(--fg);font-weight:600} .conf b.up{color:var(--up)} .conf b.down{color:var(--down)}
+.cal{width:100%;border-collapse:collapse;font:11.5px var(--f-mono);margin-top:6px}
+.cal th{font-size:10.5px;font-weight:600;color:var(--mute);text-align:right;padding:2px 4px;border-bottom:1px solid var(--line)}
+.cal th:first-child,.cal td:first-child{text-align:left}
+.cal td{text-align:right;padding:2px 4px;color:var(--mute)}
+.cal tr.on td{color:var(--fg);background:var(--panel2);font-weight:600}
+.calnote{font-size:11px;color:var(--mute);margin-top:6px;line-height:1.45}
 .tips{margin:0;padding:0;list-style:none;display:grid;gap:6px}
 .tips li{padding-left:14px;position:relative;font-size:12.5px}
 .tips li::before{content:"";position:absolute;left:0;top:7px;width:6px;height:6px;border-radius:1px;background:var(--faint)}
@@ -489,7 +496,7 @@ dialog.fd .row{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
     </section>
 
     <aside class="panel" id="bot" aria-label="Analyst-Bot">
-      <div class="ph"><span class="lbl">Analyst-Bot · <span id="bSym">—</span></span><span class="note">Quant-Modell, 6 Faktoren</span></div>
+      <div class="ph"><span class="lbl">Analyst-Bot · <span id="bSym">—</span></span><span class="note">Prognose 20 Tage · gelernt ab 1991</span></div>
       <div class="sec">
         <div class="verdict"><span class="vl" id="bVerdict">—</span><span class="sc mono" id="bScore">0</span></div>
         <div class="gauge"><i id="bNeedle" style="left:50%"></i></div>
@@ -498,6 +505,7 @@ dialog.fd .row{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
       </div>
       <div class="sec" id="bFac"></div>
       <div class="sec"><span class="lbl">Einschätzung</span><ul class="tips" id="bTips"></ul></div>
+      <div class="sec" id="bCal" hidden></div>
       <div class="sec">
         <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px"><span class="lbl">Monte-Carlo · 30 Tage</span><span class="note">1’000 Pfade</span></div>
         <canvas class="cv-mc" id="cvMc" aria-label="Monte-Carlo-Prognose"></canvas>
@@ -843,8 +851,11 @@ else{for(let k=0;k<14;k++)makeNews(-Math.round((14-k)*25+rnd()*20),true);INST.fo
 /* Nachrichten-Stimmung je Titel (exponentiell abklingend) */
 function newsScore(s){let sum=0,w=0;for(const n of news){const age=LIVE?Math.max(0,(Date.now()-n.ts.getTime())/3600e3*12.5):tick-n.tick;const dec=Math.exp(-age/600);if(n.sym===s.sym){sum+=n.sent*dec;w+=dec}else if(!n.sym&&isEq(s)){sum+=n.sent*dec*.5*Math.max(.3,s.beta);w+=dec*.5}}return{v:Math.tanh(sum*1.1),n:w}}
 
-/* ---------- Analyse-Modell ---------- */
-function analyze(s){
+/* ---------- Analyse-Modell ----------
+   score  = Prognose-Score aus bt.js (gelernt auf 142 Aktien ab 1991, Ziel: nächste 20 Handelstage).
+   trend  = bisherige Formel. Sie bleibt das Signal für Autopilot und Master-Bot, weil die Handelsregeln
+            im Backtest damit besser liefen (siehe bt.js, trendScore). */
+function analyze(s,P){
   const C=s.hist.map(k=>k.c), n=C.length, p=C[n-1];
   const s20=sma(C,20),s50=sma(C,50),R=rsi(C),M=macd(C),B=boll(C);
   const r=logret(C), vol20=stdev(r.slice(-20))*Math.sqrt(252);
@@ -866,8 +877,23 @@ function analyze(s){
   const signs=f.filter(x=>Math.abs(x.v)>.15).map(x=>Math.sign(x.v));
   const agree=signs.length?Math.abs(signs.reduce((a,b)=>a+b,0))/signs.length:0;
   const conf=clamp(.35+.5*agree-Math.max(0,vol20-.35)*.6,.1,.95);
-  const label=score>=40?"Kaufen":score>=15?"Leicht positiv":score>-15?"Halten":score>-40?"Leicht negativ":"Verkaufen";
-  return{score,label,conf,f,p,vol20,ret20,dist50,rsi:rv,pb,macdH:M.h[n-1],ns,s20:s20[n-1],s50:s50[n-1],mdd:maxDD(C.slice(-252))};
+  const o={score,conf,f,g:null,cal:null,model:false,trend:{score,conf},p,vol20,ret20,dist50,rsi:rv,pb,macdH:M.h[n-1],ns,s20:s20[n-1],s50:s50[n-1],mdd:maxDD(C.slice(-252))};
+  if(P&&typeof KWBT!=="undefined"){const r=KWBT.score(P,P.C.length-1,ns.v);
+    if(r&&r.model){o.score=r.score;o.conf=r.conf;o.f=r.f;o.g=r.g;o.cal=r.cal;o.model=true;
+      const v=Object.fromEntries(r.f.map(x=>[x.k,x.v]));o.mom12=v.mom12;o.reg=v.reg}}
+  o.label=o.score>=40?"Kaufen":o.score>=15?"Leicht positiv":o.score>-15?"Halten":o.score>-40?"Leicht negativ":"Verkaufen";
+  return o;
+}
+/* Wie gut ist die Prognose? Trefferquote je Score-Bereich, gemessen nur in Testjahren (Walk-Forward) */
+function renderCal(a){
+  const el=$("#bCal");if(typeof KWBT==="undefined"||!KWBT.MODEL.cal){el.hidden=true;return}
+  const M=KWBT.MODEL,rows=M.cal.slice().reverse(),cur=a.cal?a.cal.lo:null;
+  const sg=v=>(v>0?"+":v<0?"−":"")+Math.abs(v);
+  const rng=(c,i)=>i===0?`ab ${sg(c.lo)}`:c.lo<=-100?`unter ${sg(rows[i-1].lo)}`:`${sg(c.lo)} bis ${sg(rows[i-1].lo)}`;
+  el.hidden=false;
+  el.innerHTML=`<span class="lbl">Wie gut ist die Prognose?</span><table class="cal"><thead><tr><th>Score</th><th>gestiegen</th><th>Ø 20 Tage</th><th>besser als Markt</th></tr></thead><tbody>`+
+    rows.map((c,i)=>`<tr class="${c.lo===cur?"on":""}"><td>${rng(c,i)}</td><td>${fmt(c.hit*100,1)} %</td><td>${pct(c.ret,2)}</td><td>${fmt(c.beat*100,1)} %</td></tr>`).join("")+
+    `</tbody></table><div class="calnote">Gemessen ${M.test.replace("-","–")} an ${M.stocks} Aktien aus der Schweiz, den USA und Europa; jedes Jahr nur mit den Daten davor gelernt. Der Vorsprung hoher Scores ist klein: Über 20 Tage sind Kurse kaum vorhersagbar, und die Tabelle zeigt das ehrlich.</div>`;
 }
 function tipsFor(s,a){
   const t=[];
@@ -878,6 +904,7 @@ function tipsFor(s,a){
   t.push({c:a.macdH>=0?"pos":"neg",x:`MACD-Histogramm ${a.macdH>=0?"positiv: Momentum nimmt zu.":"negativ: Momentum lässt nach."}`});
   if(a.ns.n>.15)t.push({c:a.ns.v>=0?"pos":"neg",x:`Meldungslage ${a.ns.v>.25?"klar positiv":a.ns.v>0?"leicht positiv":a.ns.v>-.25?"leicht negativ":"klar negativ"} (Stimmung ${a.ns.v>=0?"+":"−"}${fmt(Math.abs(a.ns.v),2)}).`});
   else t.push({c:"",x:"Kaum frische Meldungen. Das Signal stützt sich auf die Technik."});
+  if(a.model&&Math.abs(a.mom12)>.35)t.push({c:a.mom12>0?"pos":"neg",x:a.mom12>0?"Starkes 12-Monats-Momentum (ohne den letzten Monat): einer der wenigen Faktoren, die seit Jahrzehnten funktionieren.":"Schwaches 12-Monats-Momentum: Titel mit schlechtem Jahr liefen historisch oft weiter schwach."});
   if(a.vol20>.4)t.push({c:"neg",x:`Hohe Volatilität (${fmt(a.vol20*100,0)} % p.a.): Positionsgrösse klein halten, Stop-Loss setzen.`});
   return t;
 }
@@ -1111,9 +1138,14 @@ function renderBot(){
   const v=$("#bVerdict");v.textContent=a.label;v.className="vl "+(a.score>=15?"up":a.score<=-15?"down":"");
   const sc=$("#bScore");sc.textContent=(a.score>0?"+":a.score<0?"−":"")+Math.abs(a.score);sc.className="sc mono "+(a.score>=15?"up":a.score<=-15?"down":"");
   $("#bNeedle").style.left=(50+a.score/2)+"%";
-  $("#bConf").textContent=`Modell-Sicherheit ${fmt(a.conf*100,0)} % · ${a.conf>.65?"Faktoren weitgehend einig":a.conf>.45?"gemischte Faktoren":"Faktoren widersprechen sich"}`;
-  $("#bFac").innerHTML=`<span class="lbl">Faktoren · Gewichtung</span>`+a.f.map(x=>{const wd=Math.abs(x.v)*50,c=x.v>=0?"var(--up)":"var(--down)";return`<div class="fac"><span>${x.l} <span class="muted mono" style="font-size:10.5px">${Math.round(x.w*100)}%</span></span><span class="bar"><i style="${x.v>=0?"left:50%":"right:50%"};width:${wd}%;background:${c}"></i></span><span class="fv ${sgn(x.v)}">${x.v>=0?"+":"−"}${fmt(Math.abs(x.v),2)}</span></div>`}).join("");
+  const ts=a.trend.score,tsTxt=`Trendsignal für Autopilot und Master-Bot: <b class="${ts>=15?"up":ts<=-15?"down":""}">${ts>0?"+":ts<0?"−":""}${Math.abs(ts)}</b>`;
+  if(a.cal){const B=KWBT.MODEL.base;
+    $("#bConf").innerHTML=`Bei diesem Score stieg der Kurs historisch in <b>${fmt(a.cal.hit*100,0)} %</b> der Fälle innerhalb von 20 Handelstagen, im Mittel um <b>${pct(a.cal.ret,1)}</b> (alle Aktien: ${fmt(B.hit*100,0)} %, ${pct(B.ret,1)}).${isEq(s)?"":" Gemessen an Aktien; hier nur ein Anhaltspunkt."}<br>${tsTxt}`;
+  }else $("#bConf").innerHTML=`Modell-Sicherheit ${fmt(a.conf*100,0)} % · ${a.conf>.65?"Faktoren weitgehend einig":a.conf>.45?"gemischte Faktoren":"Faktoren widersprechen sich"} (weniger als ein Jahr Kursdaten, darum die einfache Formel)<br>${tsTxt}`;
+  if(a.g)$("#bFac").innerHTML=`<span class="lbl">Beitrag zum Score · Anteil im Modell</span>`+a.g.map(x=>{const wd=Math.min(50,Math.abs(x.pts)/2),c=x.pts>=0?"var(--up)":"var(--down)";return`<div class="fac"><span>${x.l} <span class="muted mono" style="font-size:10.5px">${x.w<.005?"<1":Math.round(x.w*100)}%</span></span><span class="bar"><i style="${x.pts>=0?"left:50%":"right:50%"};width:${wd}%;background:${c}"></i></span><span class="fv ${sgn(x.pts)}">${x.pts>=0?"+":"−"}${fmt(Math.abs(x.pts),0)}</span></div>`}).join("");
+  else $("#bFac").innerHTML=`<span class="lbl">Faktoren · Gewichtung</span>`+a.f.map(x=>{const wd=Math.abs(x.v)*50,c=x.v>=0?"var(--up)":"var(--down)";return`<div class="fac"><span>${x.l} <span class="muted mono" style="font-size:10.5px">${Math.round(x.w*100)}%</span></span><span class="bar"><i style="${x.v>=0?"left:50%":"right:50%"};width:${wd}%;background:${c}"></i></span><span class="fv ${sgn(x.v)}">${x.v>=0?"+":"−"}${fmt(Math.abs(x.v),2)}</span></div>`}).join("");
   $("#bTips").innerHTML=tipsFor(s,a).map(t=>`<li class="${t.c}">${t.x}</li>`).join("");
+  renderCal(a);
   if(mc&&mc.sym===s.sym){$("#mcP").textContent=fmt(mc.pGain*100,0)+" %";$("#mcP").className="v "+(mc.pGain>=.5?"up":"down");$("#mcMed").textContent=pct(mc.med,1);$("#mcMed").className="v "+sgn(mc.med);$("#mcVar").textContent=pct(mc.var95,1);$("#mcVar").className="v down"}
   const rk=INST.map(x=>[x,analysis[x.sym].score]).sort((p,q)=>q[1]-p[1]);
   const row=([x,v])=>`<button data-sym="${x.sym}"><span class="sy">${x.sym}</span><span class="${sgn(v)}">${v>0?"+":v<0?"−":""}${Math.abs(v)}</span></button>`;
@@ -1184,7 +1216,7 @@ function autopilot(){
   if(ap.strat==="rot"){
     const wk=isoWeek(BENCH().hist[BENCH().hist.length-1].d);
     if(ap.lastRot!==wk){
-      const cfg=KWBT.V3,cands=INST.filter(s=>!cfg.skip.includes(s.sym)).map(s=>({s:s.sym,mo:KWBT.momOf(P[s.sym],P[s.sym].C.length-1),sc:{score:analysis[s.sym].score}}));
+      const cfg=KWBT.V3,cands=INST.filter(s=>!cfg.skip.includes(s.sym)).map(s=>({s:s.sym,mo:KWBT.momOf(P[s.sym],P[s.sym].C.length-1),sc:{score:analysis[s.sym].trend.score}}));
       const want=KWBT.pickRot(cands,cfg),ws=new Set(want.map(x=>x.s));
       for(const k of Object.keys(dep.pos))if(dep.pos[k].auto&&(dep.pos[k].core||!ws.has(k)))sell(k,false);
       for(const x of want)if(!dep.pos[x.s])note(buyAmt(x.s,Math.min(dep.cash-50,x.w*totals().val),false));
@@ -1193,7 +1225,7 @@ function autopilot(){
   }else{
     // Signal + Kern: dieselbe Logik wie der Master-Bot auf GitHub (bt.js → coreDecide)
     for(const k in dep.pos){const p=dep.pos[k];if(p.auto)p.hi=Math.max(p.hi||BY[k].last,BY[k].last)}
-    const ctx={V:totals().val,cash:dep.cash,lastD,cool:ap.cool,syms:INST.map(s=>{const a=analysis[s.sym];return{s:s.sym,P:P[s.sym],i:P[s.sym].C.length-1,grp:s.grp,price:s.last,sc:{score:a.score,conf:a.conf,vol:a.vol20},held:dep.pos[s.sym]?{...dep.pos[s.sym]}:null}})};
+    const ctx={V:totals().val,cash:dep.cash,lastD,cool:ap.cool,syms:INST.map(s=>{const a=analysis[s.sym];return{s:s.sym,P:P[s.sym],i:P[s.sym].C.length-1,grp:s.grp,price:s.last,sc:{score:a.trend.score,conf:a.trend.conf,vol:a.vol20},held:dep.pos[s.sym]?{...dep.pos[s.sym]}:null}})};
     const ord=KWBT.coreDecide(ctx,KWBT.V2);
     for(const o of ord)if(o.side==="sell")sell(o.s,o.cool);
     for(const o of ord)if(o.side==="buy")note(buyAmt(o.s,Math.min(dep.cash-50,o.amt),!!o.core));
@@ -1438,7 +1470,11 @@ function stepMarket(){
   }
 }
 function updateDay(){if(LIVE){const m=Math.max(0,Math.round((Date.now()-LIVE.updated)/60000));$("#simday").textContent=`Stand ${tfmt.format(new Date(LIVE.updated))} · ${m<1?"gerade eben":"vor "+m+" Min."}`;return}const d=cur().hist[cur().hist.length-1].d,prog=(tick%DAY_TICKS)/DAY_TICKS,min=9*60+Math.round(prog*510);$("#simday").textContent=`Handelstag ${d.getDate()}.${d.getMonth()+1}. · ${String(Math.floor(min/60)).padStart(2,"0")}:${String(min%60).padStart(2,"0")}`}
-function analyzeAll(){for(const s of INST)analysis[s.sym]=analyze(s)}
+function analyzeAll(){
+  let P=null;
+  if(typeof KWBT!=="undefined"){try{P={};for(const s of INST)P[s.sym]=KWBT.prep(rowsOf(s));KWBT.linkReg(P,k=>BY[k].grp)}catch(e){P=null;console.error(e)}}
+  for(const s of INST)analysis[s.sym]=analyze(s,P&&P[s.sym]);
+}
 let nextNews=6;
 function loop(){
   if(!speed)return;
@@ -1465,8 +1501,9 @@ function resetAsk(){const c=ctl;ctl=null;if(c)c.abort();askBtn.disabled=!sample;
 function snapshot(){
   const s=cur(),a=analysis[s.sym],q=chgOf(s),C=s.hist.map(k=>k.c);
   return{titel:s.sym,name:s.name,waehrung:s.ccy,kurs:+q.c.toFixed(4),tagesaenderung_pct:+(q.p*100).toFixed(2),
-    signal:a.label,score:a.score,modell_sicherheit_pct:Math.round(a.conf*100),
-    faktoren:Object.fromEntries(a.f.map(x=>[x.l,{wert:+x.v.toFixed(2),gewicht:x.w}])),
+    signal:a.label,prognose_score:a.score,trendsignal_autopilot:a.trend.score,
+    historisch_bei_diesem_score:a.cal?{anteil_gestiegen_20t_pct:+(a.cal.hit*100).toFixed(1),mittlere_rendite_20t_pct:+(a.cal.ret*100).toFixed(2),alle_aktien_gestiegen_pct:+(KWBT.MODEL.base.hit*100).toFixed(1)}:null,
+    faktor_beitraege_punkte:a.g?Object.fromEntries(a.g.map(x=>[x.l,+x.pts.toFixed(1)])):Object.fromEntries(a.f.map(x=>[x.l,+(x.w*x.v*155).toFixed(1)])),
     kennzahlen:{rsi14:+a.rsi.toFixed(1),abstand_sma50_pct:+(a.dist50*100).toFixed(2),perf_20t_pct:+(a.ret20*100).toFixed(2),volatilitaet_pa_pct:+(a.vol20*100).toFixed(1),max_drawdown_1j_pct:+(a.mdd*100).toFixed(1),bollinger_pctB:+a.pb.toFixed(2)},
     monte_carlo_30t:mc&&mc.sym===s.sym?{p_gewinn_pct:Math.round(mc.pGain*100),median_pct:+(mc.med*100).toFixed(1),var95_pct:+(mc.var95*100).toFixed(1)}:null,
     letzte_60_schlusskurse:C.slice(-60).map(v=>+v.toPrecision(6)),
@@ -1534,7 +1571,7 @@ function renderMb(){
   $("#mbTr").textContent=MB.tx.length;$("#mbWin").textContent=sells.length?`Trefferquote ${fmt(wins/sells.length*100,0)} %`:"noch keine Verkäufe";
   const keys=Object.keys(MB.pos);
   $("#mbPos").innerHTML=keys.length?`<table class="pos"><thead><tr><th>Titel</th><th>Rolle</th><th>Stück</th><th>Kaufkurs</th><th>Kurs</th><th>Wert CHF</th><th>G/V CHF</th><th>Signal</th></tr></thead><tbody>${keys.map(k=>{const p=MB.pos[k],s=BY[k];if(!s)return"";const val=p.q*s.last*fxOf(s),g=val-p.cost,a=analysis[k];
-    return`<tr><td><button data-sym="${k}">${k}</button><small>${esc(s.name)}</small></td><td>${p.core?"Kern":"Signal"}</td><td>${fmt(p.q,qd(s))}</td><td>${fmt(p.px,s.dec)}</td><td>${fmt(s.last,s.dec)}</td><td>${fmt(val)}</td><td><span class="${sgn(g)}">${g>=0?"+":"−"}${fmt(Math.abs(g))}<small>${pct(g/p.cost)}</small></span></td><td><span class="${a.score>=15?"up":a.score<=-15?"down":"muted"}">${a.score>0?"+":a.score<0?"−":""}${Math.abs(a.score)}</span></td></tr>`}).join("")}</tbody></table>`
+    return`<tr><td><button data-sym="${k}">${k}</button><small>${esc(s.name)}</small></td><td>${p.core?"Kern":"Signal"}</td><td>${fmt(p.q,qd(s))}</td><td>${fmt(p.px,s.dec)}</td><td>${fmt(s.last,s.dec)}</td><td>${fmt(val)}</td><td><span class="${sgn(g)}">${g>=0?"+":"−"}${fmt(Math.abs(g))}<small>${pct(g/p.cost)}</small></span></td><td><span class="${a.trend.score>=15?"up":a.trend.score<=-15?"down":"muted"}">${a.trend.score>0?"+":a.trend.score<0?"−":""}${Math.abs(a.trend.score)}</span></td></tr>`}).join("")}</tbody></table>`
     :`<div class="empty">Der Bot hält gerade nur Cash. Er kauft, sobald die Regeln erfüllt sind: Kern im SMI bei Aufwärtstrend, Einzeltitel bei Signal ab +30 an zwei Tagen.</div>`;
   $("#mbTxSum").textContent=`Letzte Trades (${MB.tx.length})`;
   $("#mbTx").innerHTML=MB.tx.slice(0,25).map(t=>{const s=BY[t.sym];return`<div class="tx"><span class="t">${dtfmt.format(new Date(t.t))}</span><span class="d ${t.side==="buy"?"up":"down"}">${t.side==="buy"?"Kauf":"Verkauf"}</span><span>${fmt(t.q,s?qd(s):2)} ${t.sym} @ ${fmt(t.px,s?s.dec:2)}<span class="tag">${esc(t.why||"")}</span></span><span class="r">CHF ${fmt(t.chf)}${t.pl!=null?` · <span class="${sgn(t.pl)}">${t.pl>=0?"+":"−"}${fmt(Math.abs(t.pl))}</span>`:""}</span></div>`}).join("")||`<div class="tx"><span></span><span></span><span class="muted">Noch keine Trades.</span><span></span></div>`;

@@ -41,7 +41,7 @@ if (data.updated !== st.lastData) {
     V: value(), cash: st.cash, lastD, cool: st.cool,
     syms: syms.map(s => {
       const x = view[s];
-      return { ...x, sc: KWBT.score(x.P, x.i, KWBT.newsV(s, data.news, now)), held: st.pos[s] ? { ...st.pos[s], auto: true } : null };
+      return { ...x, sc: KWBT.trendScore(x.P, x.i, KWBT.newsV(s, data.news, now)), held: st.pos[s] ? { ...st.pos[s], auto: true } : null };
     }),
   };
   // Nur Titel handeln, deren Börse gerade offen ist (sonst wäre der Kurs alt, z.B. am Wochenende)

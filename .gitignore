@@ -1,1 +1,6 @@
 __pycache__/
+research/history.json.gz
+research/*.pkl
+research/model.json
+research/wf_weights.json
+research/__pycache__/

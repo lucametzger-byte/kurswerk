@@ -11,6 +11,17 @@ Börsenterminal im Bloomberg-Stil mit Analyse-Bot, Monte-Carlo-Prognose und Spie
 
 Jeder Modus hat sein eigenes Depot mit CHF 100’000 Startkapital. Gespeichert wird im Browser.
 
+## Analyse-Bot
+
+Der Score im Analyse-Panel ist eine **Prognose für die nächsten 20 Handelstage**. Seine Gewichte wurden auf Kursen ab 1991 von 142 Aktien aus der Schweiz, den USA und Europa gelernt, im Walk-Forward-Verfahren: Für jedes Testjahr lernt das Modell nur mit den Daten davor.
+
+- Faktoren: Kurzfrist-Technik (Trend, Momentum, MACD, RSI, Bollinger), Momentum 12 Monate, Langfristtrend, Schwankung, Marktphase des Heimmarkts und ein kleiner News-Zuschlag.
+- Statt einer geschätzten «Modell-Sicherheit» zeigt das Panel, wie oft der Kurs bei einem solchen Score historisch tatsächlich gestiegen ist.
+- Der bisherige Score lag über 20 Tage im Schnitt sogar falsch herum (hohe Scores liefen danach schlechter). Das neue Modell liegt richtig, der Vorsprung ist aber klein.
+- Autopilot und Master-Bot handeln weiter mit dem **Trendsignal** (der bisherigen Formel), weil ihre Regeln damit im Backtest 2000–2026 besser liefen. Das Panel zeigt beide Werte.
+
+Training und Prüfung: Ordner `research/`. Die Kurshistorie holt der Workflow «Kurshistorie holen» wöchentlich in den Branch `history-data`.
+
 ## Master-Bot
 
 Der Master-Bot handelt rund um die Uhr mit CHF 100’000 Spielgeld, auch wenn die Website geschlossen ist. Er läuft bei jedem Workflow-Lauf (`scripts/bot.mjs`) nach der Strategie **Signal + Kern**, die im Backtest über verschiedene Zeitfenster am beständigsten war:

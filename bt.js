@@ -7,6 +7,8 @@ function sma(a,n){const o=new Array(a.length).fill(null);let s=0;for(let i=0;i<a
 function ema(a,n){const k=2/(n+1),o=[];let e=a[0];for(let i=0;i<a.length;i++){e=i?a[i]*k+e*(1-k):a[0];o.push(e)}return o}
 function rsi(a,n=14){const o=new Array(a.length).fill(null);let g=0,l=0;for(let i=1;i<a.length;i++){const d=a[i]-a[i-1],up=Math.max(d,0),dn=Math.max(-d,0);if(i<=n){g+=up/n;l+=dn/n;if(i===n)o[i]=l?100-100/(1+g/l):100}else{g=(g*(n-1)+up)/n;l=(l*(n-1)+dn)/n;o[i]=l?100-100/(1+g/l):100}}return o}
 function sd(a){const m=a.reduce((x,y)=>x+y,0)/a.length;return Math.sqrt(a.reduce((x,y)=>x+(y-m)**2,0)/Math.max(1,a.length-1))}
+/* rollende Standardabweichung (Stichprobe) * Wurzel 252, in O(n); null vor Index "from" */
+function rollSd(x,w,from){const o=new Array(x.length).fill(null);let s=0,q=0;for(let i=0;i<x.length;i++){s+=x[i];q+=x[i]*x[i];if(i>=w){s-=x[i-w];q-=x[i-w]*x[i-w]}if(i>=from&&i>=w-1){const m=s/w;o[i]=Math.sqrt(Math.max(0,(q-w*m*m)/(w-1))*252)}}return o}
 const HS={ch:.0005,us:.0005,eu:.0005,as:.0005,crypto:.001,x:.0003},CRYPTO=new Set(["BTC","ETH","SOL","XRP","BNB","ADA","DOGE","AVAX","DOT","LINK","LTC","TON"]);
 const QDEC={BTC:4,ETH:3,SOL:2,BNB:3,LTC:2,AVAX:2,LINK:2};
 const feeOf=v=>clamp(v*.001,5,40);
@@ -16,20 +18,77 @@ function prep(rows){
   const s20=sma(C,20),s50=sma(C,50),R=rsi(C),e12=ema(C,12),e26=ema(C,26),m=C.map((_,i)=>e12[i]-e26[i]),sg=ema(m,9),mh=m.map((x,i)=>x-sg[i]);
   const bb=C.map((_,i)=>{if(s20[i]==null)return null;let v=0;for(let j=i-19;j<=i;j++)v+=(C[j]-s20[i])**2;const s=Math.sqrt(v/20);return{hi:s20[i]+2*s,lo:s20[i]-2*s}});
   const lr=C.map((c,i)=>i?Math.log(c/C[i-1]):0);
-  const vol=C.map((_,i)=>i<21?null:sd(lr.slice(i-19,i+1))*Math.sqrt(252));
+  const vol=C.map((_,i)=>i<21?null:sd(lr.slice(i-19,i+1))*Math.sqrt(252)),vol60=rollSd(lr,60,59);
+  const hi252=new Array(C.length).fill(null),dq=[];
+  for(let i=0;i<C.length;i++){while(dq.length&&C[dq[dq.length-1]]<=C[i])dq.pop();dq.push(i);if(dq[0]<=i-252)dq.shift();if(i>=251)hi252[i]=C[dq[0]]}
   const tr=C.map((c,i)=>i?Math.max(H[i]-L[i],Math.abs(H[i]-C[i-1]),Math.abs(L[i]-C[i-1])):H[i]-L[i]);
-  return{D,O,H,L,C,s20,s50,s100:sma(C,100),R,mh,bb,vol,atr:sma(tr,14)};
+  return{D,O,H,L,C,s20,s50,s100:sma(C,100),s200:sma(C,200),R,mh,bb,vol,vol60,hi252,atr:sma(tr,14)};
 }
-/* gleiche Faktor-Formeln wie das Analyse-Modell im Terminal; newsV=null -> ohne News, Gewichte hochskaliert */
+
+/* ===== Analyse-Modell =====
+   Gewichte per Walk-Forward gelernt: Kurse ab 1991, 142 Aktien aus der Schweiz, den USA und Europa
+   (Training und Prüfung: Ordner research/). Ziel: Rendite der nächsten 20 Handelstage gegenüber dem Heimmarkt.
+   cal = gemessene Trefferquote je Score-Bereich, nur aus Testjahren, die das Modell beim Lernen nie gesehen hat. */
+const MODEL={"v":1,"trained":"2026-08-27","from":"1991-01-02","stocks":142,"samples":222170,"feats":["trend","mom","macd","rsi","bb","mom12","trend200","high52","lowvol","reg"],"w":[-0.02328,0.02647,0.01913,-0.04867,0.05492,0.04428,0.0002,-0.00012,-0.01373,-0.00544],"b":0.009838,"k":1719.886,"h":20,"cal":[{"lo":-101,"n":19311,"hit":0.5652,"ret":0.00587,"xs":0.00156,"beat":0.5182},{"lo":-60,"n":15024,"hit":0.5628,"ret":0.00624,"xs":0.0016,"beat":0.5136},{"lo":-40,"n":20301,"hit":0.5671,"ret":0.00688,"xs":0.00324,"beat":0.5201},{"lo":-20,"n":26432,"hit":0.564,"ret":0.00649,"xs":0.00256,"beat":0.5247},{"lo":0,"n":30831,"hit":0.5698,"ret":0.00733,"xs":0.00298,"beat":0.5228},{"lo":20,"n":29390,"hit":0.5691,"ret":0.00732,"xs":0.0028,"beat":0.5222},{"lo":40,"n":20749,"hit":0.5693,"ret":0.00787,"xs":0.00315,"beat":0.5252},{"lo":60,"n":21716,"hit":0.5719,"ret":0.00857,"xs":0.00452,"beat":0.5311}],"base":{"n":183754,"hit":0.5677,"ret":0.00712,"beat":0.5227},"test":"2000-2026"};
+const FLBL={trend:"Trend 50 Tage",mom:"Momentum 1 Monat",macd:"MACD",rsi:"RSI (Umkehr)",bb:"Bollinger (Umkehr)",mom12:"Momentum 12 Monate",trend200:"Trend 200 Tage",high52:"Nähe 52-Wochen-Hoch",lowvol:"Tiefe Schwankung",reg:"Marktphase Heimmarkt",news:"News-Stimmung"};
+const NEWS_PTS=15;   // News sind nicht historisch prüfbar -> nur kleiner Zuschlag
+let useModel=true;
+function setModel(on){useModel=!!on}
+/* Marktphase des Heimmarkts (Index über/unter 200-Tage-Linie) an jeden Titel hängen */
+const BENCH_REG={ch:"SMI",us:"SPX",eu:"DAX"};
+function linkReg(Pm,grpOf){
+  const reg={};
+  for(const b of new Set(Object.values(BENCH_REG))){const B=Pm[b];if(!B)continue;reg[b]=B.C.map((c,i)=>B.s200[i]==null?null:Math.tanh((c/B.s200[i]-1)/.05))}
+  for(const s in Pm){const g=grpOf(s);let b=BENCH_REG[g];if(!b&&(s==="SMI"||s==="SPX"||s==="DAX"))b=s;if(b==="DAX"&&!reg.DAX)b="SPX";
+    const B=Pm[b],R=reg[b],P=Pm[s];if(!B||!R){P.reg=null;continue}
+    const o=new Array(P.D.length).fill(null);let j=-1;for(let i=0;i<P.D.length;i++){while(j+1<B.D.length&&B.D[j+1]<=P.D[i])j++;o[i]=j>=0?R[j]:null}
+    P.reg=o}
+}
+function factorsOf(P,i){
+  const p=P.C[i],vol20=P.vol[i]||.2,dist50=p/P.s50[i]-1,ret20=p/P.C[i-20]-1,b=P.bb[i],pb=(p-b.lo)/((b.hi-b.lo)||1),rv=P.R[i],hN=P.mh[i]/p;
+  const v={trend:clamp(Math.tanh(dist50/Math.max(.02,vol20/4))*.75+(P.s20[i]>P.s50[i]?.25:-.25),-1,1),mom:Math.tanh(ret20/Math.max(.02,vol20/3.5)),
+    macd:Math.tanh(hN/(vol20/Math.sqrt(252))*1.6),rsi:clamp((50-rv)/25,-1,1)*(rv>70||rv<30?1:.45),bb:clamp((.5-pb)*1.6,-1,1)};
+  const full=i>=252&&P.s200&&P.s200[i]!=null&&P.hi252[i]!=null;
+  if(full){const vy=P.vol60[i]||vol20;
+    v.mom12=Math.tanh((P.C[i-21]/P.C[i-252]-1)/Math.max(.05,vy));v.trend200=Math.tanh((p/P.s200[i]-1)/Math.max(.05,vy/2));
+    v.high52=Math.tanh((p/P.hi252[i]-.9)/.1);v.lowvol=clamp((.30-vy)/.2,-1,1);v.reg=P.reg&&P.reg[i]!=null?P.reg[i]:0}
+  return{v,vol20,full};
+}
+function calOf(sc){if(!MODEL.cal)return null;let c=MODEL.cal[0];for(const x of MODEL.cal)if(sc>=x.lo)c=x;return c}
+/* Trendsignal: die bisherige Formel, unverändert. Alle Handelsregeln (Signal + Kern, Rotation, Master-Bot) nutzen es.
+   Es sagt die nächsten 20 Tage schlecht voraus, erkennt aber Trends, und davon leben die Strategien (Stops, Trendfolge).
+   Getestet 2000-2026: Mit dem Prognose-Score wurde "Signal + Kern" in jedem Zeitfenster schlechter, die Rotation
+   auf den Terminal-Titeln besser, auf 154 Titeln aber schlechter (nicht robust). Darum handeln die Bots weiter damit. */
+function trendScore(P,i,newsV){
+  if(i<55||P.s50[i]==null||P.bb[i]==null)return null;
+  const {v,vol20}=factorsOf(P,i),W={trend:.24,mom:.18,macd:.15,rsi:.11,bb:.07};
+  const f=Object.keys(W).map(k=>({k,l:FLBL[k],w:W[k],v:v[k]}));
+  if(newsV!=null)f.push({k:"news",l:FLBL.news,w:.25,v:newsV});
+  let raw=f.reduce((a,x)=>a+x.w*x.v,0);if(newsV==null)raw/=.75;
+  const sg=f.filter(x=>Math.abs(x.v)>.15).map(x=>Math.sign(x.v)),agree=sg.length?Math.abs(sg.reduce((a,b)=>a+b,0))/sg.length:0;
+  return{score:Math.round(clamp(raw*155,-100,100)),conf:clamp(.35+.5*agree-Math.max(0,vol20-.35)*.6,.1,.95),vol:vol20,f};
+}
+/* Beitrag der Faktor-Gruppen in Score-Punkten (für die Anzeige) */
+const GROUPS=[["Kurzfrist-Technik",["trend","mom","macd","rsi","bb"]],["Momentum 12 Monate",["mom12"]],["Langfristtrend",["trend200","high52"]],["Schwankung",["lowvol"]],["Marktphase",["reg"]],["News-Stimmung",["news"]]];
+function groupsOf(f,M){
+  const pts=x=>x.k==="news"?NEWS_PTS*x.v:x.w*x.v*M.k,tot=f.reduce((a,x)=>a+Math.abs(x.k==="news"?NEWS_PTS/M.k:x.w),0)||1;
+  return GROUPS.map(([l,ks])=>{const fs=f.filter(x=>ks.includes(x.k));if(!fs.length)return null;
+    const p=fs.reduce((a,x)=>a+pts(x),0),w=fs.reduce((a,x)=>a+Math.abs(x.k==="news"?NEWS_PTS/M.k:x.w),0)/tot;return{l,w,pts:p}}).filter(Boolean);
+}
+/* Prognose-Score -100..+100 (gelerntes Modell). newsV=null -> ohne News (Backtest). */
 function score(P,i,newsV){
   if(i<55||P.s50[i]==null||P.bb[i]==null)return null;
-  const p=P.C[i],vol20=P.vol[i]||.2,dist50=p/P.s50[i]-1,ret20=p/P.C[i-20]-1,b=P.bb[i],pb=(p-b.lo)/((b.hi-b.lo)||1),rv=P.R[i],hN=P.mh[i]/p;
-  const f=[[.24,clamp(Math.tanh(dist50/Math.max(.02,vol20/4))*.75+(P.s20[i]>P.s50[i]?.25:-.25),-1,1)],[.18,Math.tanh(ret20/Math.max(.02,vol20/3.5))],
-    [.15,Math.tanh(hN/(vol20/Math.sqrt(252))*1.6)],[.11,clamp((50-rv)/25,-1,1)*(rv>70||rv<30?1:.45)],[.07,clamp((.5-pb)*1.6,-1,1)]];
-  if(newsV!=null)f.push([.25,newsV]);
-  let raw=f.reduce((a,[w,v])=>a+w*v,0);if(newsV==null)raw/=.75;
-  const sg=f.filter(x=>Math.abs(x[1])>.15).map(x=>Math.sign(x[1])),agree=sg.length?Math.abs(sg.reduce((a,b)=>a+b,0))/sg.length:0;
-  return{score:Math.round(clamp(raw*155,-100,100)),conf:clamp(.35+.5*agree-Math.max(0,vol20-.35)*.6,.1,.95),vol:vol20};
+  const {v,vol20,full}=factorsOf(P,i);
+  let f,sc;
+  if(useModel&&full){
+    f=MODEL.feats.map((k,j)=>({k,l:FLBL[k],w:MODEL.w[j],v:v[k]}));
+    const M=MODEL.wf&&MODEL.wf[P.D[i].slice(0,4)]||MODEL; // wf: nur für den ehrlichen Walk-Forward-Test (Gewichte je Jahr)
+    const raw=f.reduce((a,x,j)=>a+M.w[j]*x.v,0);sc=(raw-M.b)*M.k;
+    if(newsV!=null){sc+=NEWS_PTS*newsV;f.push({k:"news",l:FLBL.news,w:NEWS_PTS/MODEL.k,v:newsV})}
+  }else return{...trendScore(P,i,newsV),model:false,cal:null}; // weniger als ein Jahr Historie
+  const sg=f.filter(x=>Math.abs(x.v)>.15).map(x=>Math.sign(x.w*x.v)),agree=sg.length?Math.abs(sg.reduce((a,b)=>a+b,0))/sg.length:0;
+  const s=Math.round(clamp(sc,-100,100));
+  return{score:s,conf:clamp(.35+.5*agree-Math.max(0,vol20-.35)*.6,.1,.95),vol:vol20,f,g:groupsOf(f,MODEL),model:true,cal:calOf(s)};
 }
 
 /* Strategie-Parameter */
@@ -68,7 +127,7 @@ function run(insts,cfg,startCash=100000,startDate=""){
         else if(!pos[coreS]&&c>m){const amt=Math.min(cfg.core.w*V,cash-reserved-50);if(amt>1000){pend[coreS]={side:"buy",amt};reserved+=amt}}}}
     for(const s of today){
       if(cfg.skip.includes(s)||s===coreS)continue;
-      const i=ptr[s],sc=score(P[s],i,null);if(!sc)continue;
+      const i=ptr[s],sc=trendScore(P[s],i,null);if(!sc)continue;
       const prev=lastSc[s];lastSc[s]=sc.score;
       const p=pos[s];
       if(p){p.hi=Math.max(p.hi,P[s].C[i]);
@@ -117,7 +176,7 @@ function runRot(insts,cfg,startDate,startCash=100000){
         if(q>0){const g=q*px*fx,f=feeOf(g);if(g+f<=cash){cash-=g+f;fees+=f;pos[s]={q,cost:g+f,entry:d}}}}}
     const V=value();eq.push([d,V]);
     if(k++%cfg.every)continue;
-    const cands=syms.filter(s=>!cfg.skip.includes(s)&&ptr[s]>=0).map(s=>({s,mo:momOf(P[s],ptr[s]),sc:score(P[s],ptr[s],null)}));
+    const cands=syms.filter(s=>!cfg.skip.includes(s)&&ptr[s]>=0).map(s=>({s,mo:momOf(P[s],ptr[s]),sc:trendScore(P[s],ptr[s],null)}));
     const want=pickRot(cands,cfg),wantSet=new Set(want.map(x=>x.s));
     for(const s in pos)if(!wantSet.has(s))pend[s]={side:"sell"};
     for(const x of want)if(!pos[x.s]&&!pend[x.s])pend[x.s]={side:"buy",amt:x.w*V};
@@ -146,7 +205,7 @@ function coreDecide(ctx,cfg=V2){
       else if(sc&&sc.score<=cfg.exit)o.push({s:x.s,side:"sell",why:"Signal",cool:true});
       continue}
     if(nAuto>=cfg.maxPos||!sc)continue;
-    const prev=score(x.P,x.i-1,null);
+    const prev=trendScore(x.P,x.i-1,null);
     if(sc.score<cfg.entry||sc.conf<cfg.minConf||!prev||prev.score<cfg.entry||!regime(x.grp))continue;
     const cd=ctx.cool&&ctx.cool[x.s];if(cd&&ctx.lastD&&dayDiff(cd,ctx.lastD)<cfg.cool)continue;
     const w=Math.min(cfg.maxW,cfg.risk/(sc.vol/Math.sqrt(252))),amt=Math.min(budget,w*ctx.V);
@@ -223,5 +282,5 @@ function compareAll(insts){
   const sm=hold(insts,[bm],dates),ew=hold(insts,Object.keys(insts).filter(s=>s!=="EURCHF"),dates);
   return{dates,alt,core,rot,smi:{eq:sm,st:stats(sm),half:halves(sm)},ew:{eq:ew,st:stats(ew),half:halves(ew)},bm};
 }
-return{sessionOf,isOpen,compareAll,coreDecide,newsV,dayDiff,prep,score,run,runRot,momOf,pickRot,hold,stats,compare,V1,V2,V3,feeOf};
+return{sessionOf,isOpen,compareAll,coreDecide,newsV,dayDiff,prep,score,run,runRot,momOf,pickRot,hold,stats,compare,V1,V2,V3,feeOf,MODEL,setModel,linkReg,calOf,FLBL,trendScore};
 })();
