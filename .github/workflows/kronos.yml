@@ -4,12 +4,7 @@ name: Kronos testen
 # als das Analyse-Modell? Nur Stichtage nach Kronos' Trainingsende (Juli 2025 bis Sept. 2026).
 # Ergebnisse landen im Branch kronos-results.
 on:
-  workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - research/kronos_test.py
-      - .github/workflows/kronos.yml
+  workflow_dispatch:   # nur manuell: ein Lauf braucht rund 12 x 25 Minuten Rechenzeit
 
 permissions:
   contents: write

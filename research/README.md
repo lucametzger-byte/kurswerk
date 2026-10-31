@@ -19,3 +19,21 @@ Ergebnis Oktober 2026 (Testjahre 2000–2026, 142 Aktien):
 - Handelsstrategien: mit dem neuen Score nicht robust besser, darum handeln alle Bots weiter mit dem Trendsignal.
 
 Bekannte Grenzen: nur heute existierende Firmen (Survivorship-Bias), keine historischen News, Kurse in Lokalwährung.
+
+## Kronos-Test (Oktober 2026)
+
+Kronos-small (Foundation-Modell für Kerzencharts, vortrainiert auf 12 Mrd. Kerzen) hat für 142 Aktien an 32 Stichtagen
+die nächsten 20 Handelstage vorhergesagt, nur zwischen Juli 2025 und September 2026, also nach dem Ende seiner
+Trainingsdaten (Juni 2025). Skripte: `kronos_test.py` (läuft im Workflow «Kronos testen», nur manuell), `kronos_eval.py`.
+
+| Signal | IC | Stichtage mit IC > 0 |
+|---|---|---|
+| Trendsignal (alt) | +0,018 | 66 % |
+| Analyse-Modell | +0,003 | 50 % |
+| Kronos | −0,012 | 41 % |
+| Analyse-Modell + Kronos | −0,017 | 50 % |
+
+- Kronos trifft die Richtung nicht: Korrelation mit der echten 20-Tage-Rendite +0,005, bei seinen stärksten Prognosen 49 % Treffer.
+- Es sagt zu oft «fällt» (69 % der Fälle, tatsächlich stieg der Kurs in 55 %) und überschätzt die Bewegung (Ø 10,7 % statt 6,5 %).
+- Mit dem Analyse-Modell kombiniert wird es schlechter. **Darum nicht eingebaut.**
+- Vorbehalt: 15 Monate sind kurz, auch das Analyse-Modell ist darin nicht signifikant. Kronos zeigt aber kein Anzeichen eines Vorteils.
