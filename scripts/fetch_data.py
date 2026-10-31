@@ -84,12 +84,12 @@ def history(df, ticker):
     d = d.dropna(subset=["Close"])
     rows = []
     for ts, r in d.iterrows():
-        c = num(r["Close"])
+        c = num(r["Close"], 4)
         if c is None or c <= 0:
             continue
-        o = num(r.get("Open")) or c
-        h = num(r.get("High")) or max(o, c)
-        l = num(r.get("Low")) or min(o, c)
+        o = num(r.get("Open"), 4) or c
+        h = num(r.get("High"), 4) or max(o, c)
+        l = num(r.get("Low"), 4) or min(o, c)
         v = num(r.get("Volume"), 0) or 0
         rows.append([ts.strftime("%Y-%m-%d"), o, max(h, o, c), min(l, o, c), c, v])
     return rows
@@ -149,7 +149,7 @@ def main():
     args = ap.parse_args()
 
     tickers = list(SYMS.values()) + [FX]
-    df = yf.download(tickers, period="1y", interval="1d", group_by="ticker",
+    df = yf.download(tickers, period="2y", interval="1d", group_by="ticker",
                      auto_adjust=False, progress=False, threads=True)
 
     out = {"updated": int(time.time() * 1000), "fx": None, "instruments": {}, "news": []}
@@ -159,7 +159,7 @@ def main():
         if len(rows) < 60:
             for alt in [t] + ALT.get(sym, []):
                 try:
-                    single = yf.Ticker(alt).history(period="1y", interval="1d", auto_adjust=False)
+                    single = yf.Ticker(alt).history(period="2y", interval="1d", auto_adjust=False)
                     rows = history({alt: single}, alt)
                 except Exception as e:
                     debug["news_errors"].append(f"{sym} Einzelabfrage {alt}: {e}"[:200])
