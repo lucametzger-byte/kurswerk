@@ -23,6 +23,12 @@ SYMS = {
     "ABBN": "ABBN.SW", "ZURN": "ZURN.SW", "LOGN": "LOGN.SW",
     "AAPL": "AAPL", "NVDA": "NVDA", "MSFT": "MSFT", "TSLA": "TSLA",
     "SMI": "^SSMI", "SPX": "^GSPC", "BTC": "BTC-USD", "XAU": "GC=F", "EURCHF": "EURCHF=X",
+    "SREN": "SREN.SW", "CFR": "CFR.SW", "GIVN": "GIVN.SW", "LONN": "LONN.SW", "SIKA": "SIKA.SW",
+    "HOLN": "HOLN.SW", "ALC": "ALC.SW", "GEBN": "GEBN.SW", "SCMN": "SCMN.SW", "PGHN": "PGHN.SW",
+    "SLHN": "SLHN.SW", "KNIN": "KNIN.SW", "SOON": "SOON.SW", "UHR": "UHR.SW", "AMZN": "AMZN",
+    "GOOGL": "GOOGL", "META": "META", "NFLX": "NFLX", "AMD": "AMD", "JPM": "JPM",
+    "V": "V", "KO": "KO", "DIS": "DIS", "PLTR": "PLTR", "ETH": "ETH-USD",
+    "SOL": "SOL-USD", "XAG": "SI=F",
 }
 FX = "USDCHF=X"
 # Ersatz-Ticker, falls Yahoo den ersten nicht liefert
@@ -33,9 +39,16 @@ GNEWS = {
     "ABBN": "ABB Aktie", "ZURN": "Zurich Insurance Aktie", "LOGN": "Logitech Aktie",
     "AAPL": "Apple Aktie", "NVDA": "Nvidia Aktie", "MSFT": "Microsoft Aktie", "TSLA": "Tesla Aktie",
     "BTC": "Bitcoin Kurs", "XAU": "Goldpreis", "EURCHF": "Franken Euro Kurs", "MACRO": "Börse SMI Wall Street",
+    "SREN": "Swiss Re Aktie", "CFR": "Richemont Aktie", "GIVN": "Givaudan Aktie", "LONN": "Lonza Aktie",
+    "SIKA": "Sika Aktie", "HOLN": "Holcim Aktie", "ALC": "Alcon Aktie", "GEBN": "Geberit Aktie",
+    "SCMN": "Swisscom Aktie", "PGHN": "Partners Group Aktie", "SLHN": "Swiss Life Aktie", "KNIN": "Kühne+Nagel Aktie",
+    "SOON": "Sonova Aktie", "UHR": "Swatch Aktie", "AMZN": "Amazon Aktie", "GOOGL": "Alphabet Aktie",
+    "META": "Meta Aktie", "NFLX": "Netflix Aktie", "AMD": "AMD Aktie", "JPM": "JPMorgan Aktie",
+    "V": "Visa Aktie", "KO": "Coca-Cola Aktie", "DIS": "Disney Aktie", "PLTR": "Palantir Aktie",
+    "ETH": "Ethereum Kurs", "SOL": "Solana Kurs", "XAG": "Silberpreis",
 }
 # Für diese Titel werden News geholt (SPX-News gelten als Makro-Meldungen)
-NEWS_SYMS = ["NESN", "NOVN", "ROG", "UBSG", "ABBN", "ZURN", "LOGN", "AAPL", "NVDA", "MSFT", "TSLA", "BTC", "XAU", "SPX"]
+NEWS_SYMS = ["NESN", "NOVN", "ROG", "UBSG", "ABBN", "ZURN", "LOGN", "AAPL", "NVDA", "MSFT", "TSLA", "BTC", "XAU", "SPX", "SREN", "CFR", "GIVN", "LONN", "SIKA", "HOLN", "ALC", "GEBN", "SCMN", "PGHN", "SLHN", "KNIN", "SOON", "UHR", "AMZN", "GOOGL", "META", "NFLX", "AMD", "JPM", "V", "KO", "DIS", "PLTR", "ETH", "SOL", "XAG"]
 
 POS = ("beat", "beats", "surge", "surges", "soar", "soars", "jump", "jumps", "rally", "rallies", "record",
        "upgrade", "upgraded", "raise", "raises", "raised", "gain", "gains", "strong", "stronger", "growth",
@@ -119,7 +132,7 @@ def parse_news(item, sym):
             "url": url if url.startswith("https://") else "", "sent": sentiment(title + " " + summary[:300])}
 
 
-def google_news(query, sym, limit=8):
+def google_news(query, sym, limit=6):
     url = "https://news.google.com/rss/search?" + urllib.parse.urlencode(
         {"q": query + " when:7d", "hl": "de-CH", "gl": "CH", "ceid": "CH:de"})
     req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (kurswerk-terminal)"})
@@ -200,7 +213,7 @@ def main():
                 if n:
                     add(n)
     out["news"].sort(key=lambda n: n["t"], reverse=True)
-    out["news"] = out["news"][:90]
+    out["news"] = out["news"][:160]
     out["debug"] = debug
 
     if len(out["instruments"]) < 8:

@@ -7,7 +7,8 @@ function sma(a,n){const o=new Array(a.length).fill(null);let s=0;for(let i=0;i<a
 function ema(a,n){const k=2/(n+1),o=[];let e=a[0];for(let i=0;i<a.length;i++){e=i?a[i]*k+e*(1-k):a[0];o.push(e)}return o}
 function rsi(a,n=14){const o=new Array(a.length).fill(null);let g=0,l=0;for(let i=1;i<a.length;i++){const d=a[i]-a[i-1],up=Math.max(d,0),dn=Math.max(-d,0);if(i<=n){g+=up/n;l+=dn/n;if(i===n)o[i]=l?100-100/(1+g/l):100}else{g=(g*(n-1)+up)/n;l=(l*(n-1)+dn)/n;o[i]=l?100-100/(1+g/l):100}}return o}
 function sd(a){const m=a.reduce((x,y)=>x+y,0)/a.length;return Math.sqrt(a.reduce((x,y)=>x+(y-m)**2,0)/Math.max(1,a.length-1))}
-const HS={ch:.0005,us:.0005,x:.0003};
+const HS={ch:.0005,us:.0005,x:.0003},CRYPTO=new Set(["BTC","ETH","SOL"]);
+const QDEC={BTC:4,ETH:3,SOL:2};
 const feeOf=v=>clamp(v*.001,5,40);
 
 function prep(rows){
@@ -51,8 +52,8 @@ function run(insts,cfg,startCash=100000,startDate=""){
     if(di<startDi||d<startDate)continue;
     // 1) offene Aufträge zum heutigen Eröffnungskurs ausführen
     for(const s of today){const o=pend[s];if(!o)continue;delete pend[s];
-      const i=ptr[s],px0=P[s].O[i],fx=insts[s].fx,hs=s==="BTC"?.001:HS[insts[s].grp];
-      if(o.side==="buy"&&!pos[s]){const px=px0*(1+hs),amt=Math.min(o.amt,cash-50);const q=s==="BTC"?Math.floor(amt/(px*fx)*1e4)/1e4:Math.floor((amt-feeOf(amt))/(px*fx));
+      const i=ptr[s],px0=P[s].O[i],fx=insts[s].fx,hs=CRYPTO.has(s)?.001:HS[insts[s].grp];
+      if(o.side==="buy"&&!pos[s]){const px=px0*(1+hs),amt=Math.min(o.amt,cash-50);const m=10**(QDEC[s]||0),q=Math.floor((amt-feeOf(amt))/(px*fx)*m)/m;
         if(q>0){const g=q*px*fx,f=feeOf(g);if(g+f<=cash){cash-=g+f;fees+=f;pos[s]={q,cost:g+f,entry:d,hi:P[s].C[i],own:true}}}}
       else if(o.side==="sell"&&pos[s]){const px=px0*(1-hs),g=pos[s].q*px*fx,f=feeOf(g);cash+=g-f;fees+=f;closed.push({sym:s,in:pos[s].entry,out:d,pl:g-f-pos[s].cost,ret:(g-f)/pos[s].cost-1,why:o.why});delete pos[s];lastExit[s]=di}}
     // 2) Bewertung zum Schlusskurs
@@ -110,9 +111,9 @@ function runRot(insts,cfg,startDate,startCash=100000){
     for(const s of syms){const p=P[s];while(ptr[s]+1<p.D.length&&p.D[ptr[s]+1]<=d)ptr[s]++;if(ptr[s]>=0&&p.D[ptr[s]]===d)today.push(s)}
     if(d<startDate)continue;
     for(const side of ["sell","buy"])for(const s of today){const o=pend[s];if(!o||o.side!==side)continue;delete pend[s];
-      const i=ptr[s],fx=insts[s].fx,hs=s==="BTC"?.001:HS[insts[s].grp];
+      const i=ptr[s],fx=insts[s].fx,hs=CRYPTO.has(s)?.001:HS[insts[s].grp];
       if(side==="sell"&&pos[s]){const g=pos[s].q*P[s].O[i]*(1-hs)*fx,f=feeOf(g);cash+=g-f;fees+=f;closed.push({sym:s,in:pos[s].entry,out:d,pl:g-f-pos[s].cost,ret:(g-f)/pos[s].cost-1,why:"Rotation"});delete pos[s]}
-      if(side==="buy"&&!pos[s]){const px=P[s].O[i]*(1+hs),amt=Math.min(o.amt,cash-50),q=s==="BTC"?Math.floor(amt/(px*fx)*1e4)/1e4:Math.floor((amt-feeOf(amt))/(px*fx));
+      if(side==="buy"&&!pos[s]){const px=P[s].O[i]*(1+hs),amt=Math.min(o.amt,cash-50),m=10**(QDEC[s]||0),q=Math.floor((amt-feeOf(amt))/(px*fx)*m)/m;
         if(q>0){const g=q*px*fx,f=feeOf(g);if(g+f<=cash){cash-=g+f;fees+=f;pos[s]={q,cost:g+f,entry:d}}}}}
     const V=value();eq.push([d,V]);
     if(k++%cfg.every)continue;
@@ -154,8 +155,8 @@ function coreDecide(ctx,cfg=V2){
   return o;
 }
 /* News-Stimmung wie im Terminal: abklingende Summe, Makro-Meldungen halb gewichtet */
-const BETA={NESN:.55,NOVN:.5,ROG:.5,UBSG:.75,ABBN:.7,ZURN:.6,LOGN:.6,AAPL:.7,NVDA:.8,MSFT:.75,TSLA:.6,SMI:.95,SPX:.95,BTC:.2,XAU:-.1,EURCHF:.15};
-const EQUITY=new Set(["NESN","NOVN","ROG","UBSG","ABBN","ZURN","LOGN","AAPL","NVDA","MSFT","TSLA","SMI","SPX"]);
+const BETA={NESN:.55,NOVN:.5,ROG:.5,UBSG:.75,ABBN:.7,ZURN:.6,LOGN:.6,AAPL:.7,NVDA:.8,MSFT:.75,TSLA:.6,SMI:.95,SPX:.95,BTC:.2,XAU:-.1,EURCHF:.15,SREN:0.6,CFR:0.8,GIVN:0.5,LONN:0.7,SIKA:0.8,HOLN:0.75,ALC:0.55,GEBN:0.6,SCMN:0.3,PGHN:0.9,SLHN:0.6,KNIN:0.65,SOON:0.6,UHR:0.7,AMZN:0.9,GOOGL:0.85,META:0.9,NFLX:0.7,AMD:0.9,JPM:0.8,V:0.7,KO:0.35,DIS:0.75,PLTR:0.7,ETH:0.25,SOL:0.25,XAG:-0.05};
+const EQUITY=new Set(["NESN","NOVN","ROG","UBSG","ABBN","ZURN","LOGN","AAPL","NVDA","MSFT","TSLA","SMI","SPX","SREN","CFR","GIVN","LONN","SIKA","HOLN","ALC","GEBN","SCMN","PGHN","SLHN","KNIN","SOON","UHR","AMZN","GOOGL","META","NFLX","AMD","JPM","V","KO","DIS","PLTR"]);
 function newsV(sym,news,now){let s=0;for(const n of news||[]){const dec=Math.exp(-Math.max(0,(now-n.t)/3600e3)*12.5/600);
   if(n.sym===sym)s+=n.sent*dec;else if(!n.sym&&EQUITY.has(sym))s+=n.sent*dec*.5*Math.max(.3,BETA[sym]??.5)}return Math.tanh(s*1.1)}
 function hold(insts,syms,dates,startCash=100000){

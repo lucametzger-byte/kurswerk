@@ -489,9 +489,11 @@ const INST=[
  ["NESN","Nestlé","ch","CHF",84.20,.16,2,.55],["NOVN","Novartis","ch","CHF",98.40,.18,2,.5],["ROG","Roche","ch","CHF",271.60,.20,2,.5],
  ["UBSG","UBS Group","ch","CHF",30.15,.28,2,.75],["ABBN","ABB","ch","CHF",52.30,.24,2,.7],["ZURN","Zurich Insurance","ch","CHF",562.0,.15,1,.6],
  ["LOGN","Logitech","ch","CHF",82.10,.30,2,.6],
+ ["SREN","Swiss Re","ch","CHF",128.0,0.2,2,0.6],["CFR","Richemont","ch","CHF",158.0,0.3,2,0.8],["GIVN","Givaudan","ch","CHF",3650,0.2,0,0.5],["LONN","Lonza","ch","CHF",555,0.3,1,0.7],["SIKA","Sika","ch","CHF",195,0.26,2,0.8],["HOLN","Holcim","ch","CHF",68,0.22,2,0.75],["ALC","Alcon","ch","CHF",68.5,0.22,2,0.55],["GEBN","Geberit","ch","CHF",610,0.18,1,0.6],["SCMN","Swisscom","ch","CHF",565,0.13,1,0.3],["PGHN","Partners Group","ch","CHF",1080,0.28,0,0.9],["SLHN","Swiss Life","ch","CHF",860,0.18,1,0.6],["KNIN","Kühne+Nagel","ch","CHF",175,0.26,2,0.65],["SOON","Sonova","ch","CHF",245,0.26,2,0.6],["UHR","Swatch Group","ch","CHF",155,0.3,2,0.7],
  ["AAPL","Apple","us","USD",241.30,.26,2,.7],["NVDA","Nvidia","us","USD",182.40,.50,2,.8],["MSFT","Microsoft","us","USD",471.80,.24,2,.75],["TSLA","Tesla","us","USD",332.50,.60,2,.6],
+ ["AMZN","Amazon","us","USD",228,0.3,2,0.9],["GOOGL","Alphabet","us","USD",255,0.3,2,0.85],["META","Meta Platforms","us","USD",720,0.35,2,0.9],["NFLX","Netflix","us","USD",1120,0.35,2,0.7],["AMD","AMD","us","USD",235,0.5,2,0.9],["JPM","JPMorgan Chase","us","USD",305,0.22,2,0.8],["V","Visa","us","USD",340,0.18,2,0.7],["KO","Coca-Cola","us","USD",70,0.15,2,0.35],["DIS","Disney","us","USD",115,0.25,2,0.75],["PLTR","Palantir","us","USD",180,0.6,2,0.7],
  ["SMI","Swiss Market Index","x","Pkt",12210,.13,1,.95],["SPX","S&P 500","x","Pkt",6512,.15,1,.95],
- ["BTC","Bitcoin","x","USD",97800,.55,0,.2],["XAU","Gold","x","USD/oz",3612,.17,1,-.1],["EURCHF","Euro / Franken","x","",0.9352,.05,4,.15]
+ ["BTC","Bitcoin","x","USD",97800,.55,0,.2],["XAU","Gold","x","USD/oz",3612,.17,1,-.1],["ETH","Ethereum","x","USD",3800,0.7,0,0.25],["SOL","Solana","x","USD",190,0.85,2,0.25],["XAG","Silber","x","USD/oz",46.5,0.28,2,-0.05],["EURCHF","Euro / Franken","x","",0.9352,.05,4,.15]
 ].map(([sym,name,grp,ccy,p,vol,dec,beta])=>({sym,name,grp,ccy,p,vol,dec,beta,hist:[],imp:0,last:p}));
 const BY=Object.fromEntries(INST.map(i=>[i.sym,i]));
 const isEq=i=>i.grp!=="x"||i.sym==="SMI"||i.sym==="SPX";
@@ -567,6 +569,9 @@ const TPL={
  eqNeg:["{n} verfehlt die Gewinnerwartungen","{n} senkt das Margenziel für das Gesamtjahr","Behörde prüft Geschäftspraktiken von {n}","Analyst stuft {n} auf «Verkaufen» herab","Finanzchef von {n} tritt überraschend zurück","Lieferengpässe belasten das Geschäft von {n}","{n} warnt vor schwächerer Nachfrage"],
  eqNeu:["{n} lädt zum Investorentag","{n} bestätigt den Ausblick","{n} ernennt neues Mitglied der Geschäftsleitung","{n} schliesst kleinere Übernahme ab"],
  BTC:[["Zuflüsse in Bitcoin-ETFs ziehen deutlich an",.8],["Grosse Börse meldet Hackerangriff",-.85],["Neue Regulierung für Krypto-Handel angekündigt",-.4],["Grossbank öffnet Krypto-Handel für Privatkunden",.6]],
+ ETH:[["Netzwerk-Upgrade bei Ethereum erfolgreich abgeschlossen",.7],["Ether-ETFs verzeichnen Abflüsse",-.6],["Grosse Plattform setzt auf Ethereum-Technologie",.5]],
+ SOL:[["Solana-Netzwerk mit stundenlangem Ausfall",-.8],["Rekordaktivität im Solana-Netzwerk",.7],["Investoren ziehen Geld aus kleineren Kryptowährungen ab",-.5]],
+ XAG:[["Industrielle Nachfrage nach Silber steigt kräftig",.7],["Silberpreis gibt nach schwachen Konjunkturdaten nach",-.6],["Solarindustrie stützt den Silbermarkt",.5]],
  XAU:[["Zentralbanken kaufen mehr Gold als im Vorjahr",.7],["Starker Dollar drückt auf den Goldpreis",-.6],["Geopolitische Spannungen stützen Gold",.5]],
  EURCHF:[["Franken als sicherer Hafen gefragt",-.6],["EZB überrascht mit straffer Geldpolitik",.6],["SNB interveniert offenbar am Devisenmarkt",.5]],
  macro:[["US-Inflation fällt stärker als erwartet",.7],["Fed signalisiert baldige Zinssenkung",.8],["SNB belässt den Leitzins unverändert",.05],["Ölpreis steigt nach Förderkürzung kräftig",-.5],["Schwache Einkaufsmanagerindizes in Europa",-.55],["Arbeitsmarktdaten aus den USA übertreffen Prognosen",.45],["Handelskonflikt: Neue Zölle angedroht",-.75]]
@@ -791,6 +796,7 @@ INST.forEach(s=>{
   b.onclick=()=>select(s.sym);wl.appendChild(b);rows[s.sym]={el:b,cv:b.querySelector("canvas"),p:b.querySelector(".p"),c:b.querySelector(".c"),shown:null};
 });
 const tape=$("#tape");
+tape.style.animationDuration=Math.round(INST.length*4.5)+"s";
 tape.innerHTML=[0,1].map(()=>INST.map(s=>`<span class="ti" data-tape="${s.sym}"><b>${s.sym}</b><span class="tp"></span><span class="tc"></span></span>`).join("")).join("");
 
 function chgOf(s){const H=s.hist,pc=H[H.length-2].c,c=H[H.length-1].c;return{c,d:c-pc,p:c/pc-1}}
@@ -840,10 +846,11 @@ function renderNews(newId){
   $("#nl").innerHTML=list.slice(0,50).map(n=>{const sc=n.sent>.15?"up":n.sent<-.15?"down":"muted";return`<div class="ni${n.id===newId?" new":""}"><span class="t">${ntime(n.ts)}</span><button class="sy${n.sym?"":" macro"}" ${n.sym?`data-sym="${n.sym}"`:"disabled"}>${n.sym||"MAKRO"}</button><div class="h">${n.url?`<a href="${esc(n.url)}" target="_blank" rel="noopener">${esc(n.head)}</a>`:esc(n.head)}<small>${esc(n.src)}</small></div><span class="se ${sc}">${n.sent>=0?"+":"−"}${fmt(Math.abs(n.sent),2)}</span></div>`}).join("")||`<div class="ni"><span></span><span></span><div class="h muted">Noch keine Meldungen zu diesem Titel.</div></div>`;
 }
 /* ---------- Depot ---------- */
-const START=100000,QD={BTC:4,XAU:2};
+const START=100000,QD={BTC:4,ETH:3,SOL:2,XAU:2};
 const qd=s=>QD[s.sym]||0;
 const fxOf=s=>(s.ccy==="CHF"||s.sym==="SMI"||s.sym==="EURCHF")?1:usdchf;
-const hsOf=s=>s.sym==="BTC"?.001:s.grp==="x"?.0003:.0005;
+const CRYPTO=new Set(["BTC","ETH","SOL"]);
+const hsOf=s=>CRYPTO.has(s.sym)?.001:s.grp==="x"?.0003:.0005;
 const feeOf=v=>clamp(v*.001,5,40);
 const avgPx=(s,p)=>p.pq!=null&&p.q>0?p.pq/p.q:p.cost/p.q/fxOf(s);
 const floorQ=(x,s)=>{const m=10**qd(s);return Math.max(0,Math.floor(x*m+1e-9)/m)};

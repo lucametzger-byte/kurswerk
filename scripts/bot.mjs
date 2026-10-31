@@ -7,11 +7,12 @@ const arg = (k, d) => { const i = process.argv.indexOf("--" + k); return i > 0 ?
 const DATA = arg("data", "site/data/market.json"), STATE = arg("state", "state/bot.json"), OUT = arg("out", "site/data/bot.json");
 const KWBT = new Function(fs.readFileSync(new URL("../bt.js", import.meta.url), "utf8") + ";return KWBT;")();
 
-const GRP = { NESN: "ch", NOVN: "ch", ROG: "ch", UBSG: "ch", ABBN: "ch", ZURN: "ch", LOGN: "ch", AAPL: "us", NVDA: "us", MSFT: "us", TSLA: "us", SMI: "x", SPX: "x", BTC: "x", XAU: "x", EURCHF: "x" };
-const CHF = new Set(["NESN", "NOVN", "ROG", "UBSG", "ABBN", "ZURN", "LOGN", "SMI", "EURCHF"]);
+const GRP = { NESN: "ch", NOVN: "ch", ROG: "ch", UBSG: "ch", ABBN: "ch", ZURN: "ch", LOGN: "ch", AAPL: "us", NVDA: "us", MSFT: "us", TSLA: "us", SMI: "x", SPX: "x", BTC: "x", XAU: "x", EURCHF: "x", SREN: "ch", CFR: "ch", GIVN: "ch", LONN: "ch", SIKA: "ch", HOLN: "ch", ALC: "ch", GEBN: "ch", SCMN: "ch", PGHN: "ch", SLHN: "ch", KNIN: "ch", SOON: "ch", UHR: "ch", AMZN: "us", GOOGL: "us", META: "us", NFLX: "us", AMD: "us", JPM: "us", V: "us", KO: "us", DIS: "us", PLTR: "us", ETH: "x", SOL: "x", XAG: "x" };
+const CHF = new Set(["NESN", "NOVN", "ROG", "UBSG", "ABBN", "ZURN", "LOGN", "SMI", "EURCHF", "SREN", "CFR", "GIVN", "LONN", "SIKA", "HOLN", "ALC", "GEBN", "SCMN", "PGHN", "SLHN", "KNIN", "SOON", "UHR"]);
 const START = 100000;
-const hsOf = s => s === "BTC" ? .001 : GRP[s] === "x" ? .0003 : .0005;
-const qdOf = s => s === "BTC" ? 4 : s === "XAU" ? 2 : 0;
+const CRYPTO = new Set(["BTC", "ETH", "SOL"]);
+const hsOf = s => CRYPTO.has(s) ? .001 : GRP[s] === "x" ? .0003 : .0005;
+const qdOf = s => ({ BTC: 4, ETH: 3, SOL: 2, XAU: 2 })[s] || 0;
 const floorQ = (x, s) => { const m = 10 ** qdOf(s); return Math.max(0, Math.floor(x * m + 1e-9) / m); };
 const r2 = x => Math.round(x * 100) / 100;
 
