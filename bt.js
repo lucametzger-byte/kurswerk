@@ -17,7 +17,7 @@ function prep(rows){
   const lr=C.map((c,i)=>i?Math.log(c/C[i-1]):0);
   const vol=C.map((_,i)=>i<21?null:sd(lr.slice(i-19,i+1))*Math.sqrt(252));
   const tr=C.map((c,i)=>i?Math.max(H[i]-L[i],Math.abs(H[i]-C[i-1]),Math.abs(L[i]-C[i-1])):H[i]-L[i]);
-  return{D,O,H,L,C,s20,s50,R,mh,bb,vol,atr:sma(tr,14)};
+  return{D,O,H,L,C,s20,s50,s100:sma(C,100),R,mh,bb,vol,atr:sma(tr,14)};
 }
 /* gleiche Faktor-Formeln wie das Analyse-Modell im Terminal; newsV=null -> ohne News, Gewichte hochskaliert */
 function score(P,i,newsV){
@@ -37,7 +37,7 @@ const V2={name:"Autopilot neu",entry:30,minConf:.45,exit:-10,confirm:true,regime
 const BENCH_OF={ch:"SMI",us:"SPX"};
 
 /* insts: {sym:{rows,grp,fx}} */
-function run(insts,cfg,startCash=100000){
+function run(insts,cfg,startCash=100000,startDate=""){
   const syms=Object.keys(insts),P={};for(const s of syms)P[s]=prep(insts[s].rows);
   const dates=[...new Set(syms.flatMap(s=>P[s].D))].sort();
   const ptr={};for(const s of syms)ptr[s]=-1;
@@ -48,7 +48,7 @@ function run(insts,cfg,startCash=100000){
   for(let di=0;di<dates.length;di++){
     const d=dates[di];const today=[];
     for(const s of syms){const p=P[s];while(ptr[s]+1<p.D.length&&p.D[ptr[s]+1]<=d)ptr[s]++;if(ptr[s]>=0&&p.D[ptr[s]]===d)today.push(s)}
-    if(di<startDi)continue;
+    if(di<startDi||d<startDate)continue;
     // 1) offene Aufträge zum heutigen Eröffnungskurs ausführen
     for(const s of today){const o=pend[s];if(!o)continue;delete pend[s];
       const i=ptr[s],px0=P[s].O[i],fx=insts[s].fx,hs=s==="BTC"?.001:HS[insts[s].grp];
@@ -89,6 +89,40 @@ function run(insts,cfg,startCash=100000){
   }
   return{eq,closed,fees,open:Object.keys(pos)};
 }
+
+/* Momentum-Rotation: jede Woche die stärksten Titel (3- und 6-Monats-Rendite, risikobereinigt) halten,
+   nur wenn sie über ihrer 100-Tage-Linie liegen und das Bot-Signal nicht negativ ist. */
+const V3={name:"Autopilot neu",kind:"rot",every:5,top:5,cap:.3,minScore:-15,skip:["EURCHF"]};
+function momOf(P,i){if(i<126||P.s100[i]==null)return null;const C=P.C,m=.5*(C[i]/C[i-63]-1)+.5*(C[i]/C[i-126]-1),v=P.vol[i]||.2;return{m,adj:m/v,trend:C[i]>P.s100[i],vol:v}}
+function pickRot(cands,cfg){
+  const ok=cands.filter(c=>c.mo&&c.mo.m>0&&c.mo.trend&&(!c.sc||c.sc.score>=cfg.minScore)).sort((a,b)=>b.mo.adj-a.mo.adj).slice(0,cfg.top);
+  const inv=ok.map(c=>1/c.mo.vol),tot=inv.reduce((a,b)=>a+b,0);
+  // Gewicht pro Titel: invers zur Volatilität, auf 1/top der Summe skaliert, gedeckelt
+  return ok.map((c,k)=>({s:c.s,w:Math.min(cfg.cap,inv[k]/tot*ok.length/cfg.top)}));
+}
+function runRot(insts,cfg,startDate,startCash=100000){
+  const syms=Object.keys(insts),P={};for(const s of syms)P[s]=prep(insts[s].rows);
+  const dates=[...new Set(syms.flatMap(s=>P[s].D))].sort(),ptr={};for(const s of syms)ptr[s]=-1;
+  let cash=startCash,fees=0,k=0;const pos={},pend={},eq=[],closed=[];
+  const value=()=>{let v=cash;for(const s in pos)v+=pos[s].q*P[s].C[ptr[s]]*insts[s].fx;return v};
+  for(let di=0;di<dates.length;di++){
+    const d=dates[di],today=[];
+    for(const s of syms){const p=P[s];while(ptr[s]+1<p.D.length&&p.D[ptr[s]+1]<=d)ptr[s]++;if(ptr[s]>=0&&p.D[ptr[s]]===d)today.push(s)}
+    if(d<startDate)continue;
+    for(const side of ["sell","buy"])for(const s of today){const o=pend[s];if(!o||o.side!==side)continue;delete pend[s];
+      const i=ptr[s],fx=insts[s].fx,hs=s==="BTC"?.001:HS[insts[s].grp];
+      if(side==="sell"&&pos[s]){const g=pos[s].q*P[s].O[i]*(1-hs)*fx,f=feeOf(g);cash+=g-f;fees+=f;closed.push({sym:s,in:pos[s].entry,out:d,pl:g-f-pos[s].cost,ret:(g-f)/pos[s].cost-1,why:"Rotation"});delete pos[s]}
+      if(side==="buy"&&!pos[s]){const px=P[s].O[i]*(1+hs),amt=Math.min(o.amt,cash-50),q=s==="BTC"?Math.floor(amt/(px*fx)*1e4)/1e4:Math.floor((amt-feeOf(amt))/(px*fx));
+        if(q>0){const g=q*px*fx,f=feeOf(g);if(g+f<=cash){cash-=g+f;fees+=f;pos[s]={q,cost:g+f,entry:d}}}}}
+    const V=value();eq.push([d,V]);
+    if(k++%cfg.every)continue;
+    const cands=syms.filter(s=>!cfg.skip.includes(s)&&ptr[s]>=0).map(s=>({s,mo:momOf(P[s],ptr[s]),sc:score(P[s],ptr[s],null)}));
+    const want=pickRot(cands,cfg),wantSet=new Set(want.map(x=>x.s));
+    for(const s in pos)if(!wantSet.has(s))pend[s]={side:"sell"};
+    for(const x of want)if(!pos[x.s]&&!pend[x.s])pend[x.s]={side:"buy",amt:x.w*V};
+  }
+  return{eq,closed,fees,open:Object.keys(pos)};
+}
 function hold(insts,syms,dates,startCash=100000){
   // gleichgewichtet kaufen am ersten Tag, danach halten (ohne Gebühren)
   const P={};syms.forEach(s=>P[s]=insts[s].rows);const first={},ptr={};syms.forEach(s=>ptr[s]=-1);
@@ -103,12 +137,13 @@ function stats(eq,closed,fees){
   return o;
 }
 function halves(eq,closed,fees){const h=Math.floor(eq.length/2);return[stats(eq.slice(0,h+1)),stats(eq.slice(h))]}
-function compare(insts,v2=V2){
-  const a=run(insts,V1),b=run(insts,v2),dates=b.eq.map(e=>e[0]);
+function compare(insts,v2=V3){
+  const ref=insts.SMI||insts[Object.keys(insts)[0]],startDate=ref.rows[Math.min(130,ref.rows.length-1)][0];
+  const a=run(insts,V1,100000,startDate),b=v2.kind==="rot"?runRot(insts,v2,startDate):run(insts,v2,100000,startDate),dates=b.eq.map(e=>e[0]);
   const bm=insts.SMI?"SMI":Object.keys(insts)[0];
   const smi=hold(insts,[bm],dates),ew=hold(insts,Object.keys(insts).filter(s=>s!=="EURCHF"),dates);
   return{dates,v1:{eq:a.eq,closed:a.closed,st:stats(a.eq,a.closed,a.fees),half:halves(a.eq),open:a.open},v2:{eq:b.eq,closed:b.closed,st:stats(b.eq,b.closed,b.fees),half:halves(b.eq),open:b.open},
     smi:{eq:smi,st:stats(smi),half:halves(smi)},ew:{eq:ew,st:stats(ew),half:halves(ew)},bm};
 }
-return{prep,score,run,hold,stats,compare,V1,V2,feeOf};
+return{prep,score,run,runRot,momOf,pickRot,hold,stats,compare,V1,V2,V3,feeOf};
 })();
