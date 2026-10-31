@@ -38,7 +38,7 @@ jobs:
         run: python scripts/fetch_data.py --out site/data/market.json
 
       - name: Seite zusammenstellen
-        run: cp index.html site/index.html
+        run: cp index.html bt.js site/
 
       - uses: actions/configure-pages@v5
 
