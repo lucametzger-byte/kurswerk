@@ -22,8 +22,8 @@ Die Regeln stehen einmal in `bt.js` und werden vom Backtest, vom Browser-Autopil
 
 ## So funktioniert es
 
-- `scripts/fetch_data.py` holt mit yfinance ein Jahr Tageskerzen, USD/CHF und aktuelle News.
-- `.github/workflows/update.yml` läuft alle 10 Minuten, schreibt `data/market.json` und veröffentlicht alles auf GitHub Pages. Es gibt dabei keine Commits, das Repo bleibt klein.
+- `scripts/fetch_data.py` holt mit yfinance zwei Jahre Tageskerzen, USD/CHF und aktuelle News.
+- `.github/workflows/update.yml` läuft alle 10 Minuten, schreibt `data/market.json` und veröffentlicht alles auf GitHub Pages. Kurse werden nicht committet; nur der Master-Bot speichert etwa stündlich seinen Stand im Branch `bot-state`.
 - `index.html` ist das Terminal: Chart, Indikatoren, Bot, Depot, Autopilot.
 
 ## Manuell aktualisieren
