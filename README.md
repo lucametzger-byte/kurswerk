@@ -8,6 +8,18 @@ Börsenterminal im Bloomberg-Stil mit Analyse-Bot, Monte-Carlo-Prognose und Spie
 
 Jeder Modus hat sein eigenes Depot mit CHF 100’000 Startkapital. Gespeichert wird im Browser.
 
+## Master-Bot
+
+Der Master-Bot handelt rund um die Uhr mit CHF 100’000 Spielgeld, auch wenn die Website geschlossen ist. Er läuft bei jedem Workflow-Lauf (`scripts/bot.mjs`) nach der Strategie **Signal + Kern**, die im Backtest über verschiedene Zeitfenster am beständigsten war:
+
+- Kern: 50 % im SMI, solange der SMI über seiner 50-Tage-Linie liegt.
+- Einzeltitel bei Signal ab +30 an zwei Tagen in Folge, nur bei Aufwärtstrend im Heimmarkt.
+- Positionsgrösse nach Schwankung, höchstens 15 % pro Titel, Trailing-Stop bei 3 ATR.
+
+Sein Stand liegt als `bot.json` im Branch `bot-state`. Zum Neustart mit frischem Spielgeld diesen Branch löschen.
+
+Die Regeln stehen einmal in `bt.js` und werden vom Backtest, vom Browser-Autopiloten und vom Master-Bot gemeinsam benutzt.
+
 ## So funktioniert es
 
 - `scripts/fetch_data.py` holt mit yfinance ein Jahr Tageskerzen, USD/CHF und aktuelle News.

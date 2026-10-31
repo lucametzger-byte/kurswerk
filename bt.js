@@ -123,6 +123,41 @@ function runRot(insts,cfg,startDate,startCash=100000){
   }
   return{eq,closed,fees,open:Object.keys(pos)};
 }
+
+/* ===== Gemeinsame Live-Logik "Signal + Kern" (Browser-Autopilot und Master-Bot auf GitHub) =====
+   ctx = {V, cash, lastD:"YYYY-MM-DD", cool:{sym:"YYYY-MM-DD"},
+          syms:[{s,P,i,grp,price,sc:{score,conf,vol},held:{q,hi,auto,core}|null}]}
+   -> Aufträge [{s, side:"sell"|"buy", amt?, core?, cool?, why}]  (Verkäufe zuerst ausführen) */
+const dayDiff=(a,b)=>Math.round((Date.parse(b+"T00:00:00Z")-Date.parse(a+"T00:00:00Z"))/864e5);
+function coreDecide(ctx,cfg=V2){
+  const o=[],by={};for(const x of ctx.syms)by[x.s]=x;
+  const cs=cfg.core&&by[cfg.core.sym]?cfg.core.sym:null;
+  let nAuto=ctx.syms.filter(x=>x.held&&x.held.auto&&!x.held.core).length,budget=ctx.cash-50;
+  if(cs){const x=by[cs],m=x.P.s50[x.i];
+    if(x.held&&x.held.core&&m&&x.price<m*(1-cfg.core.buf))o.push({s:cs,side:"sell",why:"Kern"});
+    else if(!x.held&&m&&x.price>m){const amt=Math.min(budget,cfg.core.w*ctx.V);if(amt>1000){o.push({s:cs,side:"buy",amt,core:true,why:"Kern"});budget-=amt}}}
+  const regime=g=>{const b=BENCH_OF[g];if(!b||!by[b])return true;const x=by[b];return x.P.s50[x.i]==null||x.price>x.P.s50[x.i]};
+  for(const x of ctx.syms){
+    if(cfg.skip.includes(x.s)||x.s===cs)continue;
+    const h=x.held,sc=x.sc;
+    if(h){if(!h.auto||h.core)continue;const atr=x.P.atr[x.i];
+      if(cfg.stopATR&&atr&&x.price<(h.hi||x.price)-cfg.stopATR*atr)o.push({s:x.s,side:"sell",why:"Stop",cool:true});
+      else if(sc&&sc.score<=cfg.exit)o.push({s:x.s,side:"sell",why:"Signal",cool:true});
+      continue}
+    if(nAuto>=cfg.maxPos||!sc)continue;
+    const prev=score(x.P,x.i-1,null);
+    if(sc.score<cfg.entry||sc.conf<cfg.minConf||!prev||prev.score<cfg.entry||!regime(x.grp))continue;
+    const cd=ctx.cool&&ctx.cool[x.s];if(cd&&ctx.lastD&&dayDiff(cd,ctx.lastD)<cfg.cool)continue;
+    const w=Math.min(cfg.maxW,cfg.risk/(sc.vol/Math.sqrt(252))),amt=Math.min(budget,w*ctx.V);
+    if(amt>500){o.push({s:x.s,side:"buy",amt,why:"Signal"});budget-=amt;nAuto++}
+  }
+  return o;
+}
+/* News-Stimmung wie im Terminal: abklingende Summe, Makro-Meldungen halb gewichtet */
+const BETA={NESN:.55,NOVN:.5,ROG:.5,UBSG:.75,ABBN:.7,ZURN:.6,LOGN:.6,AAPL:.7,NVDA:.8,MSFT:.75,TSLA:.6,SMI:.95,SPX:.95,BTC:.2,XAU:-.1,EURCHF:.15};
+const EQUITY=new Set(["NESN","NOVN","ROG","UBSG","ABBN","ZURN","LOGN","AAPL","NVDA","MSFT","TSLA","SMI","SPX"]);
+function newsV(sym,news,now){let s=0;for(const n of news||[]){const dec=Math.exp(-Math.max(0,(now-n.t)/3600e3)*12.5/600);
+  if(n.sym===sym)s+=n.sent*dec;else if(!n.sym&&EQUITY.has(sym))s+=n.sent*dec*.5*Math.max(.3,BETA[sym]??.5)}return Math.tanh(s*1.1)}
 function hold(insts,syms,dates,startCash=100000){
   // gleichgewichtet kaufen am ersten Tag, danach halten (ohne Gebühren)
   const P={};syms.forEach(s=>P[s]=insts[s].rows);const first={},ptr={};syms.forEach(s=>ptr[s]=-1);
@@ -155,5 +190,5 @@ function compareAll(insts){
   const sm=hold(insts,[bm],dates),ew=hold(insts,Object.keys(insts).filter(s=>s!=="EURCHF"),dates);
   return{dates,alt,core,rot,smi:{eq:sm,st:stats(sm),half:halves(sm)},ew:{eq:ew,st:stats(ew),half:halves(ew)},bm};
 }
-return{compareAll,prep,score,run,runRot,momOf,pickRot,hold,stats,compare,V1,V2,V3,feeOf};
+return{compareAll,coreDecide,newsV,dayDiff,prep,score,run,runRot,momOf,pickRot,hold,stats,compare,V1,V2,V3,feeOf};
 })();
