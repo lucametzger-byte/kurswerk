@@ -1,0 +1,76 @@
+name: Kronos testen
+
+# Einmaliger Test: Kann das Foundation-Modell Kronos die nächsten 20 Handelstage besser vorhersagen
+# als das Analyse-Modell? Nur Stichtage nach Kronos' Trainingsende (Juli 2025 bis Sept. 2026).
+# Ergebnisse landen im Branch kronos-results.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - research/kronos_test.py
+      - .github/workflows/kronos.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: kronos
+  cancel-in-progress: true
+
+jobs:
+  predict:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Abhängigkeiten installieren
+        run: |
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install numpy pandas einops huggingface_hub safetensors tqdm
+
+      - name: Kronos und Kurshistorie holen
+        run: |
+          git clone --depth 1 https://github.com/shiyu-coder/Kronos kronos-src
+          git fetch --depth 1 origin history-data:refs/remotes/origin/history-data
+          git show origin/history-data:history.json.gz > history.json.gz
+
+      - name: Prognosen rechnen
+        run: python research/kronos_test.py --shard ${{ matrix.shard }} --shards 12 --out kronos_${{ matrix.shard }}.csv
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: kronos-${{ matrix.shard }}
+          path: kronos_${{ matrix.shard }}.csv
+          if-no-files-found: ignore
+
+  collect:
+    needs: predict
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: parts
+          merge-multiple: true
+
+      - name: Im Branch kronos-results speichern
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir out && cp parts/*.csv out/ && cd out
+          git init -q -b kronos-results
+          git config user.name "kurswerk-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add . && git commit -q -m "Kronos-Test $(date -u +%Y-%m-%d)"
+          git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" kronos-results
