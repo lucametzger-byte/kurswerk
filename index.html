@@ -486,14 +486,14 @@ const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
 /* ---------- Instrumente ---------- */
 const DAY_TICKS=120, TICK_MS=1000;
 const INST=[
- ["NESN","Nestlé","ch","CHF",84.20,.16,2,.55],["NOVN","Novartis","ch","CHF",98.40,.18,2,.5],["ROG","Roche","ch","CHF",271.60,.20,2,.5],
- ["UBSG","UBS Group","ch","CHF",30.15,.28,2,.75],["ABBN","ABB","ch","CHF",52.30,.24,2,.7],["ZURN","Zurich Insurance","ch","CHF",562.0,.15,1,.6],
- ["LOGN","Logitech","ch","CHF",82.10,.30,2,.6],
- ["SREN","Swiss Re","ch","CHF",128.0,0.2,2,0.6],["CFR","Richemont","ch","CHF",158.0,0.3,2,0.8],["GIVN","Givaudan","ch","CHF",3650,0.2,0,0.5],["LONN","Lonza","ch","CHF",555,0.3,1,0.7],["SIKA","Sika","ch","CHF",195,0.26,2,0.8],["HOLN","Holcim","ch","CHF",68,0.22,2,0.75],["ALC","Alcon","ch","CHF",68.5,0.22,2,0.55],["GEBN","Geberit","ch","CHF",610,0.18,1,0.6],["SCMN","Swisscom","ch","CHF",565,0.13,1,0.3],["PGHN","Partners Group","ch","CHF",1080,0.28,0,0.9],["SLHN","Swiss Life","ch","CHF",860,0.18,1,0.6],["KNIN","Kühne+Nagel","ch","CHF",175,0.26,2,0.65],["SOON","Sonova","ch","CHF",245,0.26,2,0.6],["UHR","Swatch Group","ch","CHF",155,0.3,2,0.7],
- ["AAPL","Apple","us","USD",241.30,.26,2,.7],["NVDA","Nvidia","us","USD",182.40,.50,2,.8],["MSFT","Microsoft","us","USD",471.80,.24,2,.75],["TSLA","Tesla","us","USD",332.50,.60,2,.6],
- ["AMZN","Amazon","us","USD",228,0.3,2,0.9],["GOOGL","Alphabet","us","USD",255,0.3,2,0.85],["META","Meta Platforms","us","USD",720,0.35,2,0.9],["NFLX","Netflix","us","USD",1120,0.35,2,0.7],["AMD","AMD","us","USD",235,0.5,2,0.9],["JPM","JPMorgan Chase","us","USD",305,0.22,2,0.8],["V","Visa","us","USD",340,0.18,2,0.7],["KO","Coca-Cola","us","USD",70,0.15,2,0.35],["DIS","Disney","us","USD",115,0.25,2,0.75],["PLTR","Palantir","us","USD",180,0.6,2,0.7],
- ["SMI","Swiss Market Index","x","Pkt",12210,.13,1,.95],["SPX","S&P 500","x","Pkt",6512,.15,1,.95],
- ["BTC","Bitcoin","x","USD",97800,.55,0,.2],["XAU","Gold","x","USD/oz",3612,.17,1,-.1],["ETH","Ethereum","x","USD",3800,0.7,0,0.25],["SOL","Solana","x","USD",190,0.85,2,0.25],["XAG","Silber","x","USD/oz",46.5,0.28,2,-0.05],["EURCHF","Euro / Franken","x","",0.9352,.05,4,.15]
+ ["NESN","Nestlé","ch","CHF",84.7,.16,2,.55],["NOVN","Novartis","ch","CHF",133.78,.18,2,.5],["ROG","Roche","ch","CHF",411.2,.20,2,.5],
+ ["UBSG","UBS Group","ch","CHF",39.24,.28,2,.75],["ABBN","ABB","ch","CHF",73.12,.24,2,.7],["ZURN","Zurich Insurance","ch","CHF",621.4,.15,1,.6],
+ ["LOGN","Logitech","ch","CHF",81.66,.30,2,.6],
+ ["SREN","Swiss Re","ch","CHF",153.35,0.2,2,0.6],["CFR","Richemont","ch","CHF",164.4,0.3,2,0.8],["GIVN","Givaudan","ch","CHF",3973,0.2,0,0.5],["LONN","Lonza","ch","CHF",644.2,0.3,1,0.7],["SIKA","Sika","ch","CHF",178.35,0.26,2,0.8],["HOLN","Holcim","ch","CHF",68.96,0.22,2,0.75],["ALC","Alcon","ch","CHF",59.1,0.22,2,0.55],["GEBN","Geberit","ch","CHF",575.8,0.18,1,0.6],["SCMN","Swisscom","ch","CHF",699.5,0.13,1,0.3],["PGHN","Partners Group","ch","CHF",644,0.28,0,0.9],["SLHN","Swiss Life","ch","CHF",958.2,0.18,1,0.6],["KNIN","Kühne+Nagel","ch","CHF",237.2,0.26,2,0.65],["SOON","Sonova","ch","CHF",281.6,0.26,2,0.6],["UHR","Swatch Group","ch","CHF",175,0.3,2,0.7],
+ ["AAPL","Apple","us","USD",348.91,.26,2,.7],["NVDA","Nvidia","us","USD",213.66,.50,2,.8],["MSFT","Microsoft","us","USD",530.14,.24,2,.75],["TSLA","Tesla","us","USD",403.3,.60,2,.6],
+ ["AMZN","Amazon","us","USD",243.79,0.3,2,0.9],["GOOGL","Alphabet","us","USD",283.82,0.3,2,0.85],["META","Meta Platforms","us","USD",624.52,0.35,2,0.9],["NFLX","Netflix","us","USD",62.05,0.35,2,0.7],["AMD","AMD","us","USD",566.42,0.5,2,0.9],["JPM","JPMorgan Chase","us","USD",343.58,0.22,2,0.8],["V","Visa","us","USD",410.54,0.18,2,0.7],["KO","Coca-Cola","us","USD",92.82,0.15,2,0.35],["DIS","Disney","us","USD",110.91,0.25,2,0.75],["PLTR","Palantir","us","USD",196.42,0.6,2,0.7],
+ ["SMI","Swiss Market Index","x","Pkt",14757,.13,1,.95],["SPX","S&P 500","x","Pkt",7580.1,.15,1,.95],
+ ["BTC","Bitcoin","x","USD",77319,.55,0,.2],["XAU","Gold","x","USD/oz",3884.9,.17,1,-.1],["ETH","Ethereum","x","USD",2244.4,0.7,0,0.25],["SOL","Solana","x","USD",96.54,0.85,2,0.25],["XAG","Silber","x","USD/oz",49.135,0.28,2,-0.05],["EURCHF","Euro / Franken","x","",0.9209,.05,4,.15]
 ].map(([sym,name,grp,ccy,p,vol,dec,beta])=>({sym,name,grp,ccy,p,vol,dec,beta,hist:[],imp:0,last:p}));
 const BY=Object.fromEntries(INST.map(i=>[i.sym,i]));
 const isEq=i=>i.grp!=="x"||i.sym==="SMI"||i.sym==="SPX";
