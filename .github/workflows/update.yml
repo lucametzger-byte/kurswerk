@@ -1,14 +1,18 @@
 name: Kurse aktualisieren
 
+# Takt: Jeder Lauf startet nach rund 10 Minuten selbst den nächsten (Job "takt" unten).
+# Der GitHub-Zeitplan ist nur noch Notstart, falls die Kette einmal abreisst:
+# GitHub drosselt Zeitpläne stark, in der Praxis kamen sie nur alle 3 bis 7 Stunden.
 on:
   schedule:
-    - cron: "*/10 * * * *"   # alle 10 Minuten (GitHub startet oft ein paar Minuten später)
+    - cron: "*/10 * * * *"
   workflow_dispatch:          # manuell starten: Actions > Kurse aktualisieren > Run workflow
   push:
     branches: [main]
 
 permissions:
   contents: write   # der Master-Bot speichert seinen Stand im Branch bot-state
+  actions: write    # damit der Lauf den nächsten Lauf starten kann
   pages: write
   id-token: write
 
@@ -77,3 +81,28 @@ jobs:
 
       - id: deploy
         uses: actions/deploy-pages@v4
+
+  takt:
+    needs: deploy
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Nach 10 Minuten nächsten Lauf starten
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          # Wartezeit so, dass zwischen zwei Läufen rund 10 Minuten liegen
+          START=$(date -d "$(gh run view ${{ github.run_id }} --json createdAt -q .createdAt)" +%s)
+          WAIT=$(( START + 600 - $(date +%s) ))
+          if [ "$WAIT" -gt 0 ]; then sleep "$WAIT"; fi
+          # Nur anstossen, wenn nicht schon ein anderer Lauf wartet oder läuft (sonst doppelte Ketten)
+          OTHERS=$(gh run list -w update.yml -L 20 --json databaseId,status \
+            -q "[.[] | select(.databaseId != ${{ github.run_id }} and .status != \"completed\")] | length")
+          if [ "$OTHERS" -eq 0 ]; then
+            gh workflow run update.yml --ref main
+            echo "Nächster Lauf gestartet."
+          else
+            echo "Es wartet schon ein Lauf, keiner zusätzlich gestartet."
+          fi
