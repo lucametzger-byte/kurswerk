@@ -2,6 +2,8 @@
 
 Börsenterminal im Bloomberg-Stil mit Analyse-Bot, Monte-Carlo-Prognose und Spielgeld-Depot.
 
+**👉 [Terminal öffnen](https://lucametzger-byte.github.io/kurswerk/)**
+
 **Zwei Modi** (Schalter oben rechts):
 - **Live**: echte Kurse und News von Yahoo Finance, alle ~10 Minuten aktualisiert (Börsenkurse teils 15 Min. verzögert). Gehandelt wird mit Spielgeld.
   - **Echtzeit für Krypto**: Bitcoin, Ethereum und Solana kommen direkt im Browser live von Binance (WebSocket, ohne Anmeldung, 24/7).
